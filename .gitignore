@@ -1,0 +1,7 @@
+data/
+*.npz
+*.edf
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+download.log
