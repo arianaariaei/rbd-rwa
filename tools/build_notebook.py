@@ -4,14 +4,20 @@ The notebook carries its own copy of every source file (written out with
 %%writefile), so running it needs nothing but a Google account: no git clone,
 no copying code to Drive. Re-run this script after changing any source file.
 
+Work happens on the Colab machine's own disk (/content/durable), which is fast
+and needs no permissions; results are copied to Google Drive only in the last
+step, and copied back at the start of a later session to resume.
+
     python tools/build_notebook.py
 """
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "notebooks" / "RBD_RWA_Colab.ipynb"
+OUT = ROOT / "notebooks" / "RBD_RWA_CAP.ipynb"
 CODE_DIR = "/content/rbd-rwa"
+WORK_DIR = "/content/durable"
+DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
 FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/rwa.py",
          "run_extract.py", "run_score.py"]
@@ -28,23 +34,23 @@ def code(text):
 
 def main():
     cells = [
-        md("""
+        md(f"""
 # REM sleep without atonia: CAP extraction and scoring
 
-Runs entirely in the cloud. Each recording is streamed from PhysioNet's open
-mirror into this machine's temporary disk, reduced to a small EMG-envelope file
-that is saved to **Google Drive** (`MyDrive/rbd-rwa`), and the raw file is
-deleted. Progress is recorded after every recording, so if the session
-disconnects just run all cells again and it continues where it stopped.
+Runs entirely in the cloud. Each of CAP's 108 recordings is streamed from
+PhysioNet's open mirror (about 40 GB in total) onto this Colab machine,
+reduced to a small EMG-envelope file, and the raw file is deleted.
 
-Run order: **Runtime -> Run all**.
-"""),
-        code("""
-from google.colab import drive
-drive.mount('/content/drive')
+* Steps 1-2 work on the Colab machine's own disk and need no permissions.
+* Step 3 copies the results to Google Drive (`MyDrive/rbd-rwa`) so they
+  survive the session. It asks for permission to access Drive.
+* In a later session, run step 0 first to bring earlier results back, and
+  extraction continues where it stopped.
 """),
         code(f"""
-!mkdir -p {CODE_DIR}/src
+import os
+os.environ['RBD_DURABLE_DIR'] = '{WORK_DIR}'
+!mkdir -p {CODE_DIR}/src {WORK_DIR}
 %cd {CODE_DIR}
 """),
     ]
@@ -52,15 +58,22 @@ drive.mount('/content/drive')
         src = (ROOT / rel).read_text(encoding="utf-8")
         cells.append(code(f"%%writefile {CODE_DIR}/{rel}\n{src}"))
     cells += [
+        md("## 0. (Later sessions only) Restore earlier results from Google Drive"),
         code(f"""
-import os
-assert os.path.isdir('/content/drive/MyDrive'), 'Google Drive is not mounted - run the first cell'
-!cd {CODE_DIR} && python -c "from src import config; config.describe()"
+from google.colab import drive
+drive.mount('/content/drive')
+!mkdir -p {DRIVE_DIR} && rsync -a {DRIVE_DIR}/ {WORK_DIR}/ && du -sh {WORK_DIR}
 """),
-        md("## 1. Extract every CAP recording (about 40 GB streamed, a few hundred MB kept)"),
+        md("## 1. Extract every CAP recording"),
         code(f"!cd {CODE_DIR} && python run_extract.py"),
         md("## 2. Score every recording with every RWA method"),
         code(f"!cd {CODE_DIR} && python run_score.py"),
+        md("## 3. Save results to Google Drive"),
+        code(f"""
+from google.colab import drive
+drive.mount('/content/drive')
+!mkdir -p {DRIVE_DIR} && rsync -a {WORK_DIR}/ {DRIVE_DIR}/ && du -sh {DRIVE_DIR}
+"""),
     ]
     nb = {"cells": cells,
           "metadata": {"colab": {"provenance": []},

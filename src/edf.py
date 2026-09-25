@@ -7,8 +7,10 @@ directly keeps each channel's true rate, reads only the channels asked for,
 and needs nothing beyond numpy - which matters on hosted notebooks where
 installing packages is not always possible.
 
-Values are returned in microvolts (from the header's physical dimension), so
-amplitudes are comparable across files that store uV, mV or V.
+Values are returned in microvolts when the header's physical dimension is a
+voltage. Some files carry no unit at all (raw converter counts); those are
+returned unscaled and flagged, because an absolute amplitude threshold means
+nothing for them.
 """
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +30,7 @@ class Channel:
     gain: float          # physical units per digital unit
     offset: float        # physical value at digital zero
     prefilter: str
+    transducer: str
 
     @property
     def uv_scale(self):
@@ -68,7 +71,7 @@ def read_header(path) -> EdfHeader:
                 .decode("latin-1").strip() for i in range(ns)], start + width * ns
 
     labels, o = fields(16, 0)
-    _, o = fields(80, o)                          # transducer
+    trans, o = fields(80, o)
     dims, o = fields(8, o)
     pmin, o = fields(8, o)
     pmax, o = fields(8, o)
@@ -94,15 +97,24 @@ def read_header(path) -> EdfHeader:
             index=i, label=labels[i], dim=dims[i],
             fs=per_rec[i] / record_s if record_s > 0 else float("nan"),
             n_per_record=per_rec[i], gain=gain, offset=p0 - gain * d0,
-            prefilter=pref[i]))
+            prefilter=pref[i], transducer=trans[i]))
     return EdfHeader(path, n_records, record_s, header_bytes,
                      h[168:176].decode("ascii", "ignore").strip(),
                      h[176:184].decode("ascii", "ignore").strip(), chans)
 
 
-def read_channel(hdr: EdfHeader, label, microvolts=True):
-    """One channel as float64 at its native rate. Returns (signal, fs)."""
-    ch = hdr.find(label)
+def read_channel(hdr: EdfHeader, channel):
+    """
+    One channel as float64 at its native rate, in microvolts when the unit is
+    a voltage. `channel` is a Channel, an index, or a label (first match).
+    Returns (signal, fs, unit_known).
+    """
+    if isinstance(channel, Channel):
+        ch = channel
+    elif isinstance(channel, int):
+        ch = hdr.channels[channel]
+    else:
+        ch = hdr.find(channel)
     per_rec = [c.n_per_record for c in hdr.channels]
     rec_len = sum(per_rec)
     start = sum(per_rec[:ch.index])
@@ -111,9 +123,7 @@ def read_channel(hdr: EdfHeader, label, microvolts=True):
     x = np.asarray(raw[:, start:start + ch.n_per_record], dtype=np.float64).ravel()
     del raw
     x = x * ch.gain + ch.offset
-    if microvolts:
-        k = ch.uv_scale
-        if k is None:
-            raise ValueError(f"{label}: physical unit '{ch.dim}' is not a voltage")
+    k = ch.uv_scale
+    if k is not None:
         x *= k
-    return x, ch.fs
+    return x, ch.fs, k is not None

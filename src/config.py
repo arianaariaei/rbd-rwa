@@ -48,6 +48,12 @@ ENV_FS = 50
 # the conventional upper edge, lowered automatically when Nyquist forbids it.
 EMG_BAND = (10.0, 100.0)
 
+# A second, common band that every recording can supply. Chin EMG in CAP is
+# sampled anywhere from 100 to 512 Hz, and amplitude depends on bandwidth, so
+# comparing amplitudes ACROSS recordings needs the same band for all of them.
+# 45 Hz is the highest edge a 100 Hz recording allows (Nyquist minus 5).
+HARMONIZED_BAND = (10.0, 45.0)
+
 
 def describe():
     print(f"on Colab : {ON_COLAB}")

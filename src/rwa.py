@@ -37,13 +37,20 @@ NREM_CODES = (2, 3)
 #  SHARED MACHINERY
 # ══════════════════════════════════════════════════════════════════════════════
 
-def mini_epoch_rms(env, env_fs, seconds):
-    """Split an envelope into consecutive mini-epochs and take the RMS of each."""
+def mini_epoch_rms(env, env_fs, seconds, how="rms"):
+    """
+    Split an envelope into consecutive mini-epochs and summarise each: "rms"
+    for an RMS envelope (gives the RMS of the underlying signal), "mean" for a
+    mean-rectified envelope (gives its average rectified amplitude).
+    """
     w = int(round(env_fs * seconds))
     n = len(env) // w
     if n == 0:
         return np.empty(0), w
-    return np.sqrt((env[: n * w].reshape(n, w) ** 2).mean(axis=1)), w
+    blocks = env[: n * w].reshape(n, w)
+    if how == "mean":
+        return blocks.mean(axis=1), w
+    return np.sqrt((blocks ** 2).mean(axis=1)), w
 
 
 def stage_mask_at(env_fs, hypnogram, epoch_sec, codes, n_samples):
@@ -168,11 +175,15 @@ def score_night(env_chin, env_legs, env_fs, hypnogram, epoch_sec, method: Method
     if rem.sum() < env_fs * method.mini_s * 10:
         return {"method": method.name, "error": "insufficient REM"}
 
-    # Phasic: fraction of REM mini-epochs containing a qualifying burst.
+    # Phasic: fraction of REM mini-epochs containing a qualifying burst. Each
+    # muscle is judged against ITS OWN background, not the chin's.
     burst = phasic_bursts(env_chin, env_fs, method.phasic_mult * base)
     if "legs" in method.muscles and env_legs is not None and len(env_legs):
         for row in env_legs:
-            burst |= phasic_bursts(row, env_fs, method.phasic_mult * base)
+            b_leg = baseline_amplitude(row, env_fs, hypnogram, epoch_sec,
+                                       method.baseline, seconds=method.mini_s)
+            if np.isfinite(b_leg) and b_leg > 0:
+                burst |= phasic_bursts(row, env_fs, method.phasic_mult * b_leg)
 
     w = int(round(env_fs * method.mini_s))
     idx = np.flatnonzero(rem)
@@ -210,32 +221,40 @@ def score_night(env_chin, env_legs, env_fs, hypnogram, epoch_sec, method: Method
     }
 
 
-def rem_atonia_index(env_chin, env_fs, hypnogram, epoch_sec, bin_width=1.0,
-                     n_bins=20):
+def rem_atonia_index(env_mav, env_fs, hypnogram, epoch_sec, bin_width=1.0,
+                     n_bins=20, noise="moving_min", window_s=60):
     """
     REM Atonia Index (Ferri et al.). Average rectified amplitude per 1 s
-    mini-epoch of REM, noise-corrected by subtracting the minimum, then binned
-    by amplitude. The index contrasts the proportion of near-silent seconds
-    against the proportion showing intermediate activity, running from 0 (no
-    atonia) to 1 (complete atonia).
+    mini-epoch of REM, noise-corrected, then binned by amplitude. The index
+    contrasts the proportion of near-silent seconds against the proportion
+    showing intermediate activity, running from 0 (no atonia) to 1 (complete
+    atonia).
 
         RAI = A0 / (1 - A1)
 
     with A0 the fraction of mini-epochs at or below bin_width and A1 the
-    fraction in the next bin.
+    fraction in the next bin. `env_mav` must be a MEAN-RECTIFIED envelope and
+    in microvolts: the 1 uV bins are absolute.
 
-    VERIFY: the normalisation and bin edges differ between the original paper
-    and later descriptions. Treat the absolute value as provisional until
-    checked against the source; the RANKING across recordings is considerably
-    more robust than the value itself.
+    noise = "moving_min": subtract the minimum within a moving window of
+            `window_s` mini-epochs centred on each one (the 2010 "improved"
+            computation, as we understand it); "global_min": subtract the
+            night's single minimum (the 2008 description).
+
+    VERIFY: the noise-correction window and bin edges against the original
+    papers before reporting absolute RAI values.
     """
-    rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env_chin))
+    rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env_mav))
     if rem.sum() < env_fs * 30:
         return {"method": "RAI", "error": "insufficient REM"}
-    amp, _ = mini_epoch_rms(env_chin[rem], env_fs, 1.0)
+    amp, _ = mini_epoch_rms(env_mav[rem], env_fs, 1.0, how="mean")
     if len(amp) < 30:
         return {"method": "RAI", "error": "insufficient REM"}
-    amp = amp - amp.min()                                   # noise correction
+    if noise == "moving_min":
+        from scipy.ndimage import minimum_filter1d
+        amp = amp - minimum_filter1d(amp, size=int(window_s), mode="nearest")
+    else:
+        amp = amp - amp.min()
     edges = np.arange(0, (n_bins + 1) * bin_width, bin_width)
     hist, _ = np.histogram(amp, bins=np.r_[edges, np.inf])
     frac = hist / hist.sum()
@@ -251,12 +270,24 @@ def rem_atonia_index(env_chin, env_fs, hypnogram, epoch_sec, bin_width=1.0,
     }
 
 
-def score_all(env, hypnogram, meta):
-    """Run every method on one derived recording."""
-    env_fs, epoch_sec = meta["env_fs"], meta["epoch_sec"]
-    chin = env[0]
-    legs = env[1:] if len(env) > 1 else None
-    rows = [score_night(chin, legs, env_fs, hypnogram, epoch_sec, m)
+def score_all(d, band="native"):
+    """
+    Run every method on one derived recording (the dict from load_derived).
+    band = "native" uses each recording's own EMG band; "harmonized" uses the
+    common 10-45 Hz band, the fair choice when comparing ACROSS recordings made
+    on different equipment.
+    """
+    meta = d["meta"]
+    env_fs, epoch_sec, hyp = meta["env_fs"], meta["epoch_sec"], d["hypnogram"]
+    sfx = "" if band == "native" else "_h"
+    chin_rms, chin_mav = d[f"chin_rms{sfx}"], d[f"chin_mav{sfx}"]
+    legs = d["legs"] if len(d["legs"]) else None
+    rows = [score_night(chin_rms, legs, env_fs, hyp, epoch_sec, m)
             for m in METHODS.values()]
-    rows.append(rem_atonia_index(chin, env_fs, hypnogram, epoch_sec))
+    if meta["chin_info"]["unit_known"]:
+        rows.append(rem_atonia_index(chin_mav, env_fs, hyp, epoch_sec))
+    else:
+        rows.append({"method": "RAI", "error": "chin EMG has no physical units"})
+    for r in rows:
+        r["band"] = band
     return rows
