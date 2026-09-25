@@ -11,8 +11,11 @@ against a diagnostic cut-off. They differ along four axes:
                         defined; here parameterised explicitly
     threshold           2x or 4x that baseline
 
-They have never been run head-to-head on the same recordings, which is what
-this module exists to make possible.
+Five COMPUTERISED indices (RAI among them) were compared on the same 146
+recordings by Cesari et al., Sleep 2018;41(10):zsy133, which reported
+discrimination between groups. This module puts the visual-criteria methods
+and the RAI on one code path so that all of them can be applied unchanged to
+large clinical cohorts.
 
 PARAMETER PROVENANCE. The structure of each method follows its original
 description, but several numeric details - notably the exact baseline
