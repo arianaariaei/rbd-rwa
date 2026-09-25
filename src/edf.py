@@ -84,9 +84,10 @@ def read_header(path) -> EdfHeader:
     n_records = int(h[236:244])
     record_s = float(h[244:252])
     per_rec = [int(x) for x in nsamp]
-    if n_records < 0:                             # "-1" = unknown; infer it
-        data_bytes = path.stat().st_size - header_bytes
-        n_records = data_bytes // (2 * sum(per_rec))
+    # Records actually present. The header may say "-1" (unknown), or claim
+    # more records than a truncated file holds; trust the file size.
+    on_disk = (path.stat().st_size - header_bytes) // (2 * sum(per_rec))
+    n_records = on_disk if n_records < 0 else min(n_records, on_disk)
 
     chans = []
     for i in range(ns):
