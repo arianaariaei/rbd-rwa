@@ -1,10 +1,18 @@
 """Resumable downloads. PhysioNet's TLS drops connections mid-transfer, so
-every request retries and partial files resume with an HTTP Range header."""
+every request retries and partial files resume with an HTTP Range header.
+
+Open PhysioNet databases are mirrored byte-for-byte on AWS Open Data
+(s3://physionet-open), which is far faster from cloud notebooks than
+physionet.org, so the mirror is tried first and PhysioNet is the fallback."""
 import time
 import urllib.request
 from pathlib import Path
 
-CAP_BASE = "https://physionet.org/files/capslpdb/1.0.0/"
+CAP_MIRRORS = (
+    "https://physionet-open.s3.amazonaws.com/capslpdb/1.0.0/",
+    "https://physionet.org/files/capslpdb/1.0.0/",
+)
+CAP_BASE = CAP_MIRRORS[-1]
 
 
 def remote_size(url, tries=5):
@@ -24,12 +32,17 @@ def download(url, dest: Path, tries=10, quiet=False):
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     total = remote_size(url)
-    if total and dest.exists() and dest.stat().st_size == total:
+    if total is None:
+        raise IOError(f"cannot reach {url}")
+    if dest.exists() and dest.stat().st_size == total:
         return dest
     for i in range(tries):
         have = dest.stat().st_size if dest.exists() else 0
-        if total and have == total:
+        if have == total:
             return dest
+        if have > total:                          # stale file from another source
+            dest.unlink()
+            have = 0
         try:
             headers = {"Range": f"bytes={have}-"} if have else {}
             req = urllib.request.Request(url, headers=headers)
@@ -42,14 +55,33 @@ def download(url, dest: Path, tries=10, quiet=False):
                       f"({dest.stat().st_size / 1e6 if dest.exists() else 0:.0f} MB)")
             time.sleep(3)
     got = dest.stat().st_size if dest.exists() else 0
-    if total and got != total:
+    if got != total:
         raise IOError(f"{dest.name}: got {got} of {total} bytes")
     return dest
 
 
+def download_any(name, dest: Path, mirrors=CAP_MIRRORS):
+    """Try each mirror in turn; the first one that completes wins."""
+    last = None
+    for base in mirrors:
+        try:
+            return download(base + name, dest, quiet=True)
+        except Exception as e:
+            last = e
+    raise IOError(f"{name}: all mirrors failed ({last})")
+
+
 def cap_records():
     """All CAP record names, grouped by cohort prefix."""
-    txt = urllib.request.urlopen(CAP_BASE + "RECORDS", timeout=45).read().decode()
+    txt = None
+    for base in CAP_MIRRORS:
+        try:
+            txt = urllib.request.urlopen(base + "RECORDS", timeout=45).read().decode()
+            break
+        except Exception:
+            continue
+    if txt is None:
+        raise IOError("cannot fetch the CAP RECORDS list from any mirror")
     recs = [r.replace(".edf", "") for r in txt.split()]
     groups = {}
     for r in recs:
@@ -60,6 +92,6 @@ def cap_records():
 
 def fetch_cap(record, scratch: Path):
     """Download one CAP recording (.edf + .txt) into scratch."""
-    edf = download(CAP_BASE + record + ".edf", Path(scratch) / f"{record}.edf")
-    ann = download(CAP_BASE + record + ".txt", Path(scratch) / f"{record}.txt")
+    edf = download_any(record + ".edf", Path(scratch) / f"{record}.edf")
+    ann = download_any(record + ".txt", Path(scratch) / f"{record}.txt")
     return edf, ann
