@@ -6,10 +6,11 @@ raw signal is what makes the project runnable on hosted notebooks, where disk
 is ephemeral and sessions end without warning.
 
 Per recording we keep:
-    chin  (4, n_bins) float16 - chin EMG amplitude per 20 ms bin:
-              rows = RMS and mean-rectified in the native band (10-100 Hz or
-              as high as the sampling rate allows), then the same two in the
-              common 10-45 Hz band shared by every recording
+    chin  (5, n_bins) float16 - chin EMG amplitude per 20 ms bin, heartbeat
+              removed: RMS and mean-rectified in the native band (10-100 Hz
+              or as high as the sampling rate allows), the same two in the
+              common 10-45 Hz band shared by every recording, and finally the
+              native-band RMS WITHOUT heartbeat removal, for comparison
     legs  (n_legs, n_bins) float16 - leg EMG RMS, native band
     hypnogram (n_epochs,) int8   - 30 s sleep stages on the EDF timeline
     meta  json - channels, native rates, bands, units, alignment
@@ -27,8 +28,12 @@ import numpy as np
 from .config import ENV_FS, EMG_BAND, HARMONIZED_BAND, DERIVED
 from .cap import build_hypnogram, EPOCH_SEC
 from .edf import read_header, read_channel
+from .ecg import find_ecg, r_peaks, plausible, subtract_heartbeat, artifact_ratio
 
-CHIN_ROWS = ("rms", "mav", "rms_h", "mav_h")
+# Chin rows, all with the heartbeat removed except the last, which keeps it
+# so the effect of heartbeat removal can itself be measured.
+CHIN_ROWS = ("rms", "mav", "rms_h", "mav_h", "rms_with_ecg")
+F16_MAX = 65000.0     # float16 tops out at 65504; clip (and count) above this
 
 # How chin and leg EMG are labelled across CAP's recording systems. Bipolar
 # labels win over split electrodes, which win over a lone referential name.
@@ -92,11 +97,8 @@ def emg_band(fs, band=EMG_BAND):
     return lo, hi
 
 
-def envelope(sig, fs, env_fs=ENV_FS, band=EMG_BAND, mains=None):
-    """
-    Band-pass (and optionally notch) the EMG, then reduce it to amplitude per
-    bin of exactly 1/env_fs seconds. Returns (rms, mav, (lo, hi)).
-    """
+def bandpass(sig, fs, band=EMG_BAND, mains=None):
+    """Band-pass (and optionally notch) the EMG. Returns (filtered, (lo, hi))."""
     from scipy.signal import butter, sosfiltfilt, iirnotch, filtfilt
 
     lo, hi = emg_band(fs, band)
@@ -107,6 +109,18 @@ def envelope(sig, fs, env_fs=ENV_FS, band=EMG_BAND, mains=None):
         for f0 in np.arange(mains, hi, mains):
             b, a = iirnotch(f0, Q=30.0, fs=fs)
             x = filtfilt(b, a, x)
+    return x, (lo, hi)
+
+
+def envelope(sig, fs, env_fs=ENV_FS, band=EMG_BAND, mains=None, beats_s=None):
+    """
+    Band-pass the EMG, subtract the heartbeat if R-peak times are given, then
+    reduce it to amplitude per bin of exactly 1/env_fs seconds.
+    Returns (rms, mav, (lo, hi)).
+    """
+    x, (lo, hi) = bandpass(sig, fs, band, mains)
+    if beats_s is not None and len(beats_s):
+        x = subtract_heartbeat(x, fs, beats_s)
 
     n_bins = int(np.floor(len(x) * env_fs / fs))
     if n_bins == 0:
@@ -142,12 +156,30 @@ def extract_recording(edf_path: Path, txt_path: Path, record: str,
         raise ValueError(f"{record}: no chin EMG channel among "
                          f"{[c.label for c in hdr.channels]}")
 
+    # Heartbeats, for removing the ECG from the chin EMG
+    ecg_src = find_ecg(hdr)
+    beats, ecg_label = np.empty(0), None
+    if ecg_src is not None:
+        e, fs_e, _, ecg_label, _ = read_source(hdr, ecg_src)
+        beats = r_peaks(e, fs_e)
+        if not plausible(beats, len(e) / fs_e):
+            beats = np.empty(0)
+        del e
+
     x, fs, unit_known, label, ch = read_source(hdr, chin_src)
-    rms, mav, band = envelope(x, fs, mains=mains)
-    rms_h, mav_h, band_h = envelope(x, fs, band=HARMONIZED_BAND, mains=mains)
+    rms, mav, band = envelope(x, fs, mains=mains, beats_s=beats)
+    rms_h, mav_h, band_h = envelope(x, fs, band=HARMONIZED_BAND, mains=mains,
+                                    beats_s=beats)
+    rms_raw, _, _ = envelope(x, fs, mains=mains)
     chin_meta = _describe(label, ch, fs, unit_known, band, x)
     chin_meta["band_harmonized"] = list(band_h)
-    chin_rows = [rms, mav, rms_h, mav_h]
+    chin_meta["ecg"] = {
+        "channel": ecg_label, "beats": int(len(beats)),
+        "heart_rate_bpm": round(60.0 * len(beats) / (len(x) / fs), 1) if len(beats) else None,
+        "artifact_ratio_before": round(artifact_ratio(rms_raw, ENV_FS, beats), 3),
+        "artifact_ratio_after": round(artifact_ratio(rms, ENV_FS, beats), 3),
+    }
+    chin_rows = [rms, mav, rms_h, mav_h, rms_raw]
     del x
 
     leg_rows, leg_meta = [], []
@@ -179,9 +211,13 @@ def extract_recording(edf_path: Path, txt_path: Path, record: str,
         "epoch_sec": EPOCH_SEC,
         "alignment": align,
     }
+    # Anything above float16's range is an artefact (tens of millivolts);
+    # clip it rather than store inf, and record how much there was.
+    meta["bins_clipped_f16"] = int((chin > F16_MAX).sum() + (legs > F16_MAX).sum())
     out_dir.mkdir(parents=True, exist_ok=True)
     tmp = out.with_name(out.stem + ".tmp.npz")
-    np.savez_compressed(tmp, chin=chin.astype(np.float16), legs=legs.astype(np.float16),
+    np.savez_compressed(tmp, chin=np.minimum(chin, F16_MAX).astype(np.float16),
+                        legs=np.minimum(legs, F16_MAX).astype(np.float16),
                         hypnogram=hyp, meta=json.dumps(meta))
     tmp.replace(out)                             # never leave a half-written file
     return out
@@ -210,6 +246,9 @@ def summarise(path):
     ci = meta["chin_info"]
     legs = "/".join(f"{m['fs']:g}" for m in meta["leg_info"]) or "-"
     unit = "" if ci["unit_known"] else "  NO-UNITS"
+    e = ci.get("ecg", {})
+    ecg = (f"ECG artefact x{e['artifact_ratio_before']:.2f}->x{e['artifact_ratio_after']:.2f}"
+           if e.get("beats") else "no ECG")
     return (f"{meta['record']:<8} {meta['duration_s']/3600:>5.1f} h  "
             f"chin {ci['label']} @ {ci['fs']:g} Hz{unit}  legs {legs} Hz  "
-            f"REM {rem} epochs ({rem*0.5:.0f} min)")
+            f"REM {rem} epochs ({rem*0.5:.0f} min)  {ecg}")

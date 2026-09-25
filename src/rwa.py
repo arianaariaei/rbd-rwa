@@ -1,29 +1,38 @@
-"""The published methods for quantifying REM sleep without atonia.
+"""The published methods for quantifying REM sleep without atonia (RWA).
 
-Each method reduces one night to a percentage (or an index) which is compared
-against a diagnostic cut-off. They differ along four axes:
+Each method reduces one night to one or more percentages (or an index) that are
+compared against a diagnostic cut-off. They differ in epoch length, amplitude
+thresholds, what counts as "background", and which cut-off applies:
 
-    mini-epoch length   1 s (RAI), 2 s (Montreal phasic), 3 s (SINBAR, AASM
-                        phasic), 20 s (Montreal tonic), 30 s (AASM tonic)
-    muscles             submentalis alone, or submentalis + bilateral flexor
-                        digitorum superficialis (SINBAR)
-    baseline            "minimum amplitude" during REM or NREM, variously
-                        defined; here parameterised explicitly
-    threshold           2x or 4x that baseline
+  Montreal  Montplaisir et al., Mov Disord 2010;25:2044 (after Lapierre &
+            Montplaisir, Neurology 1992). Tonic: 20 s epochs, >50% of the
+            epoch at >= 2x background or > 10 uV; positive at >= 30%.
+            Phasic: 2 s mini-epochs containing bursts > 4x background;
+            positive at >= 15%.
+  SINBAR    Frauscher et al., Sleep 2012;35:835. Phasic bursts 0.1-5 s at
+            > 2x background; tonic as Montreal but on 30 s epochs; "any"
+            activity in 3 s mini-epochs. Mentalis-only "any" cut-off 18.2%
+            (100% specificity). The better-known 32% needs bilateral flexor
+            digitorum superficialis EMG, which most recordings lack.
+  AASM      AASM scoring manual. Tonic epoch: >= 50% of a 30 s epoch above
+            the minimum NREM amplitude. Phasic epoch: >= 5 of its ten 3 s
+            mini-epochs contain 0.1-5 s bursts >= 4x background. The manual
+            gives no numeric cut-off for "excessive".
+  RAI       REM Atonia Index, Ferri et al., J Sleep Res 2008 and Sleep Med
+            2010;11:947 ("improved" computation: subtract the minimum of the
+            surrounding 60 one-second mini-epochs). RAI < 0.8 is the commonly
+            used abnormal range.
 
 Five COMPUTERISED indices (RAI among them) were compared on the same 146
-recordings by Cesari et al., Sleep 2018;41(10):zsy133, which reported
-discrimination between groups. This module puts the visual-criteria methods
-and the RAI on one code path so that all of them can be applied unchanged to
-large clinical cohorts.
+recordings by Cesari et al., Sleep 2018;41(10):zsy133. This module puts the
+visual-criteria methods and the RAI on one code path so they can be applied
+unchanged to large clinical cohorts.
 
-PARAMETER PROVENANCE. The structure of each method follows its original
-description, but several numeric details - notably the exact baseline
-definition and the RAI binning - are stated ambiguously or inconsistently
-across the primary papers and secondary reviews. Every such value is a named
-field on Method so it can be checked against the source and changed in one
-place. Anything listed in a method's `verify` tuple has NOT been confirmed
-against the original publication and must be before any result is reported.
+OPERATIONALISING "BACKGROUND". The visual methods judge background by eye.
+Here it is an explicit, named choice (`baseline_amplitude`), because it
+changes every downstream percentage. Values still listed in a method's
+`verify` tuple are secondary-source readings not yet checked against the
+original paper.
 """
 from dataclasses import dataclass, field
 
@@ -68,18 +77,14 @@ def stage_mask_at(env_fs, hypnogram, epoch_sec, codes, n_samples):
 
 def baseline_amplitude(env, env_fs, hypnogram, epoch_sec, how, seconds=1.0):
     """
-    Background EMG level against which activity is judged.
+    Background EMG level against which activity is judged, from 1 s windows.
 
-    how = "min_nrem" : lowest mini-epoch amplitude in NREM. This is the classic
-                       wording, but a literal minimum is set by a single
-                       quietest window and is therefore unstable.
-          "p5_nrem"  : 5th percentile in NREM - a robust reading of the same
-                       intent, and this project's default.
-          "min_rem"  : lowest mini-epoch amplitude within REM itself.
-          "p5_rem"   : 5th percentile within REM.
-
-    Which of these is used materially changes every downstream percentage, so
-    it is treated as an explicit choice rather than an implementation detail.
+    how = "min_nrem" : lowest window in NREM (the AASM wording; a literal
+                       minimum is set by one window, so unstable)
+          "p5_nrem"  : 5th percentile in NREM (robust reading of the same)
+          "min_rem" / "p5_rem" : the same within REM itself, i.e. the atonic
+                       floor of REM - closer to what a visual scorer calls
+                       "background" when judging a REM epoch
     """
     codes = NREM_CODES if how.endswith("nrem") else (REM_CODE,)
     m = stage_mask_at(env_fs, hypnogram, epoch_sec, codes, len(env))
@@ -91,27 +96,32 @@ def baseline_amplitude(env, env_fs, hypnogram, epoch_sec, how, seconds=1.0):
     return float(r.min() if how.startswith("min") else np.percentile(r, 5))
 
 
-def phasic_bursts(env, env_fs, threshold, min_s=0.1, max_s=5.0):
+def runs_above(env, env_fs, threshold, min_s=0.1, max_s=None):
     """
-    Boolean array marking samples that fall inside a phasic burst.
-
-    A burst is a run of consecutive samples above `threshold` whose duration
-    lies in [min_s, max_s]. The upper bound is what distinguishes phasic bursts
-    from sustained tonic activity, so longer runs are excluded here and counted
-    by the tonic measure instead.
+    Boolean array marking samples inside runs of consecutive supra-threshold
+    samples lasting at least `min_s` (and at most `max_s`, if given). The upper
+    bound separates phasic bursts from sustained tonic activity.
     """
     above = env > threshold
-    out = np.zeros_like(above)
+    out = np.zeros(len(env), dtype=bool)
     if not above.any():
         return out
     edges = np.diff(np.r_[0, above.astype(np.int8), 0])
     starts = np.flatnonzero(edges == 1)
     stops = np.flatnonzero(edges == -1)
     dur = (stops - starts) / env_fs
-    keep = (dur >= min_s) & (dur <= max_s)
+    keep = dur >= min_s
+    if max_s is not None:
+        keep &= dur <= max_s
     for a, b in zip(starts[keep], stops[keep]):
         out[a:b] = True
     return out
+
+
+def _blocks(mask_idx, width):
+    """Consecutive, non-overlapping blocks of `width` indices from an index list."""
+    n = len(mask_idx) // width
+    return mask_idx[: n * width].reshape(n, width)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -121,135 +131,122 @@ def phasic_bursts(env, env_fs, threshold, min_s=0.1, max_s=5.0):
 @dataclass
 class Method:
     name: str
-    mini_s: float                 # mini-epoch length for the phasic measure
-    tonic_s: float                # epoch length for the tonic measure
-    phasic_mult: float            # burst threshold, multiples of baseline
-    tonic_mult: float             # tonic threshold, multiples of baseline
-    tonic_fraction: float         # fraction of the epoch that must be active
-    baseline: str = "p5_nrem"
-    muscles: tuple = ("chin",)
-    cutoff: float = float("nan")  # published cut-off, on the "any activity" %
-    notes: str = ""
+    tonic_epoch_s: float          # tonic scored on epochs of this length
+    tonic_mult: float             # tonic threshold, multiples of background
+    tonic_abs_uv: float = None    # "... or > X uV": an absolute alternative
+    tonic_baseline: str = "p5_rem"
+    phasic_mini_s: float = 3.0    # phasic scored on mini-epochs of this length
+    phasic_mult: float = 4.0
+    phasic_max_s: float = 5.0     # longest burst still counted as phasic
+    phasic_baseline: str = "p5_rem"
+    any_mini_s: float = None      # SINBAR "any" density on these mini-epochs
+    any_mult: float = None
+    phasic_epoch_rule: int = None # AASM: >= this many phasic mini-epochs / 30 s
+    cutoffs: dict = field(default_factory=dict)   # metric -> % (positive if >=)
     verify: tuple = field(default_factory=tuple)
 
 
 METHODS = {
-    # Lapierre & Montplaisir 1992. Tonic scored on 20 s epochs, phasic on 2 s
-    # mini-epochs containing bursts above 4x background.
     "montreal": Method(
-        "Montreal", mini_s=2.0, tonic_s=20.0,
-        phasic_mult=4.0, tonic_mult=2.0, tonic_fraction=0.50,
-        notes="tonic = activity >2x background sustained over half a 20 s epoch",
-        verify=("tonic_fraction", "cutoff"),
+        "Montreal", tonic_epoch_s=20.0, tonic_mult=2.0, tonic_abs_uv=10.0,
+        phasic_mini_s=2.0, phasic_mult=4.0, phasic_max_s=15.0,
+        cutoffs={"tonic_pct": 30.0, "phasic_pct": 15.0},
+        verify=("phasic_max_s",),     # 10 s vs 15 s differs between sources
     ),
-    # Frauscher et al. (SINBAR). 3 s mini-epochs. The published 31.9% cut-off
-    # applies to the COMBINED submentalis + bilateral FDS montage, not to chin
-    # alone, so scoring chin-only against it is not like-for-like.
     "sinbar": Method(
-        "SINBAR", mini_s=3.0, tonic_s=30.0,
-        phasic_mult=2.0, tonic_mult=2.0, tonic_fraction=0.50,
-        muscles=("chin", "legs"), cutoff=31.9,
-        notes="'any' activity = tonic or phasic, chin + bilateral FDS; CAP "
-              "provides leg (tibialis) rather than FDS, an imperfect substitute",
-        verify=("phasic_mult", "muscles"),
+        "SINBAR", tonic_epoch_s=30.0, tonic_mult=2.0, tonic_abs_uv=10.0,
+        phasic_mini_s=3.0, phasic_mult=2.0, phasic_max_s=5.0,
+        any_mini_s=3.0, any_mult=2.0,
+        cutoffs={"any_pct": 18.2},    # mentalis only, 3 s mini-epochs
     ),
-    # AASM scoring manual. Tonic on the full 30 s epoch; a phasic epoch is
-    # positive when at least 5 of its ten 3 s mini-epochs contain bursts.
     "aasm": Method(
-        "AASM", mini_s=3.0, tonic_s=30.0,
-        phasic_mult=4.0, tonic_mult=1.0, tonic_fraction=0.50,
-        notes="phasic epoch positive when >=5 of 10 mini-epochs contain bursts",
-        verify=("tonic_mult", "cutoff"),
+        "AASM", tonic_epoch_s=30.0, tonic_mult=1.0, tonic_baseline="p5_nrem",
+        phasic_mini_s=3.0, phasic_mult=4.0, phasic_max_s=5.0,
+        phasic_epoch_rule=5,
+        cutoffs={},                   # the manual gives none
     ),
 }
 
 
-def score_night(env_chin, env_legs, env_fs, hypnogram, epoch_sec, method: Method):
-    """Apply one method to one night. Returns a dict of its measures."""
-    base = baseline_amplitude(env_chin, env_fs, hypnogram, epoch_sec,
-                              method.baseline, seconds=method.mini_s)
-    if not np.isfinite(base) or base <= 0:
-        return {"method": method.name, "error": "baseline could not be estimated"}
+def score_night(env, env_fs, hypnogram, epoch_sec, method: Method, unit_known=True):
+    """Apply one method to one night's chin RMS envelope."""
+    out = {"method": method.name}
+    rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env))
+    out["rem_minutes"] = round(float(rem.sum()) / env_fs / 60, 1)
+    if rem.sum() < env_fs * 60:
+        out["error"] = "less than one minute of REM"
+        return out
 
-    rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env_chin))
-    if rem.sum() < env_fs * method.mini_s * 10:
-        return {"method": method.name, "error": "insufficient REM"}
-
-    # Phasic: fraction of REM mini-epochs containing a qualifying burst. Each
-    # muscle is judged against ITS OWN background, not the chin's.
-    burst = phasic_bursts(env_chin, env_fs, method.phasic_mult * base)
-    if "legs" in method.muscles and env_legs is not None and len(env_legs):
-        for row in env_legs:
-            b_leg = baseline_amplitude(row, env_fs, hypnogram, epoch_sec,
-                                       method.baseline, seconds=method.mini_s)
-            if np.isfinite(b_leg) and b_leg > 0:
-                burst |= phasic_bursts(row, env_fs, method.phasic_mult * b_leg)
-
-    w = int(round(env_fs * method.mini_s))
+    # ── tonic ────────────────────────────────────────────────────────────────
+    bt = baseline_amplitude(env, env_fs, hypnogram, epoch_sec, method.tonic_baseline)
+    bp = baseline_amplitude(env, env_fs, hypnogram, epoch_sec, method.phasic_baseline)
+    if not (np.isfinite(bt) and bt > 0 and np.isfinite(bp) and bp > 0):
+        out["error"] = "background could not be estimated"
+        return out
+    thr_t = method.tonic_mult * bt
+    if method.tonic_abs_uv is not None and unit_known:
+        thr_t = min(thr_t, method.tonic_abs_uv)      # "2x background OR > 10 uV"
     idx = np.flatnonzero(rem)
-    idx = idx[: (len(idx) // w) * w].reshape(-1, w) if len(idx) >= w \
-        else np.empty((0, w), dtype=int)
-    tonic_over = (env_chin[idx] > method.tonic_mult * base).mean(axis=1) \
-        if len(idx) else np.empty(0)
-    phasic_hit = burst[idx].any(axis=1) if len(idx) else np.empty(0, bool)
-    phasic_pct = 100.0 * phasic_hit.mean() if len(idx) else float("nan")
+    tb = _blocks(idx, int(round(env_fs * method.tonic_epoch_s)))
+    tonic = (env[tb] > thr_t).mean(axis=1) > 0.5 if len(tb) else np.empty(0, bool)
 
-    # Tonic: fraction of REM epochs sustained above threshold, on the method's
-    # own tonic epoch length rather than the phasic mini-epoch length.
-    wt = int(round(env_fs * method.tonic_s))
-    idt = np.flatnonzero(rem)
-    idt = idt[: (len(idt) // wt) * wt].reshape(-1, wt) if len(idt) >= wt \
-        else np.empty((0, wt), dtype=int)
-    tonic_pct = (100.0 * ((env_chin[idt] > method.tonic_mult * base).mean(axis=1)
-                          >= method.tonic_fraction).mean()) if len(idt) \
-        else float("nan")
+    # ── phasic ───────────────────────────────────────────────────────────────
+    thr_p = method.phasic_mult * bp
+    burst = runs_above(env, env_fs, thr_p, 0.1, method.phasic_max_s)
+    pb = _blocks(idx, int(round(env_fs * method.phasic_mini_s)))
+    phasic = burst[pb].any(axis=1) if len(pb) else np.empty(0, bool)
 
-    # "Any" activity - the quantity the published cut-offs are stated against.
-    any_pct = 100.0 * np.mean(phasic_hit | (tonic_over >= method.tonic_fraction)) \
-        if len(idx) else float("nan")
+    out.update(background_tonic_uV=round(bt, 3), background_phasic_uV=round(bp, 3),
+               tonic_threshold_uV=round(thr_t, 3), phasic_threshold_uV=round(thr_p, 3),
+               tonic_pct=round(100.0 * tonic.mean(), 2) if len(tonic) else np.nan,
+               phasic_pct=round(100.0 * phasic.mean(), 2) if len(phasic) else np.nan)
 
-    return {
-        "method": method.name,
-        "baseline_uV": round(base, 3),
-        "rem_minutes": round(rem.sum() / env_fs / 60, 1),
-        "tonic_pct": round(float(tonic_pct), 2),
-        "phasic_pct": round(float(phasic_pct), 2),
-        "any_pct": round(float(any_pct), 2),
-        "cutoff": method.cutoff,
-        "positive": (bool(any_pct >= method.cutoff)
-                     if np.isfinite(method.cutoff) else None),
-    }
+    # ── AASM: an epoch is phasic when >= 5 of its ten 3 s mini-epochs are ──
+    if method.phasic_epoch_rule:
+        per = int(round(env_fs * epoch_sec))
+        w = int(round(env_fs * method.phasic_mini_s))
+        hits = []
+        for i, code in enumerate(hypnogram):
+            if code != REM_CODE or (i + 1) * per > len(env):
+                continue
+            seg = burst[i * per:(i + 1) * per]
+            hits.append(seg[: (per // w) * w].reshape(-1, w).any(axis=1).sum()
+                        >= method.phasic_epoch_rule)
+        out["phasic_epoch_pct"] = round(100.0 * np.mean(hits), 2) if hits else np.nan
+
+    # ── SINBAR "any": tonic, phasic or both, above the same amplitude ──────
+    if method.any_mini_s:
+        active = runs_above(env, env_fs, method.any_mult * bp, 0.1, None)
+        ab = _blocks(idx, int(round(env_fs * method.any_mini_s)))
+        out["any_pct"] = round(100.0 * active[ab].any(axis=1).mean(), 2) \
+            if len(ab) else np.nan
+
+    hits = [out.get(k, np.nan) >= v for k, v in method.cutoffs.items()
+            if np.isfinite(out.get(k, np.nan))]
+    out["positive"] = bool(any(hits)) if hits else None
+    return out
 
 
 def rem_atonia_index(env_mav, env_fs, hypnogram, epoch_sec, bin_width=1.0,
                      n_bins=20, noise="moving_min", window_s=60):
     """
-    REM Atonia Index (Ferri et al.). Average rectified amplitude per 1 s
-    mini-epoch of REM, noise-corrected, then binned by amplitude. The index
-    contrasts the proportion of near-silent seconds against the proportion
-    showing intermediate activity, running from 0 (no atonia) to 1 (complete
-    atonia).
+    REM Atonia Index. Average rectified amplitude per 1 s mini-epoch of REM,
+    noise-corrected, then binned by amplitude:
 
         RAI = A0 / (1 - A1)
 
-    with A0 the fraction of mini-epochs at or below bin_width and A1 the
-    fraction in the next bin. `env_mav` must be a MEAN-RECTIFIED envelope and
-    in microvolts: the 1 uV bins are absolute.
+    with A0 the fraction of mini-epochs <= 1 uV and A1 the fraction in
+    (1, 2] uV. Runs from 0 (no atonia) to 1 (complete atonia). `env_mav` must
+    be a MEAN-RECTIFIED envelope in microvolts, because the bins are absolute.
 
-    noise = "moving_min": subtract the minimum within a moving window of
-            `window_s` mini-epochs centred on each one (the 2010 "improved"
-            computation, as we understand it); "global_min": subtract the
-            night's single minimum (the 2008 description).
-
-    VERIFY: the noise-correction window and bin edges against the original
-    papers before reporting absolute RAI values.
+    noise = "moving_min": subtract the minimum of the `window_s` mini-epochs
+            surrounding each one (Ferri et al. 2010, "improved" RAI);
+            "global_min": subtract the night's single minimum (2008 version).
     """
     rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env_mav))
-    if rem.sum() < env_fs * 30:
-        return {"method": "RAI", "error": "insufficient REM"}
+    if rem.sum() < env_fs * 60:
+        return {"method": "RAI", "error": "less than one minute of REM"}
     amp, _ = mini_epoch_rms(env_mav[rem], env_fs, 1.0, how="mean")
-    if len(amp) < 30:
-        return {"method": "RAI", "error": "insufficient REM"}
     if noise == "moving_min":
         from scipy.ndimage import minimum_filter1d
         amp = amp - minimum_filter1d(amp, size=int(window_s), mode="nearest")
@@ -264,8 +261,7 @@ def rem_atonia_index(env_mav, env_fs, hypnogram, epoch_sec, bin_width=1.0,
         "method": "RAI",
         "rai": round(rai, 4),
         "frac_silent": round(a0, 4),
-        "rem_minutes": round(rem.sum() / env_fs / 60, 1),
-        "cutoff": 0.8,          # RAI < 0.8 is commonly cited as abnormal
+        "rem_minutes": round(float(rem.sum()) / env_fs / 60, 1),
         "positive": bool(rai < 0.8) if np.isfinite(rai) else None,
     }
 
@@ -279,12 +275,17 @@ def score_all(d, band="native"):
     """
     meta = d["meta"]
     env_fs, epoch_sec, hyp = meta["env_fs"], meta["epoch_sec"], d["hypnogram"]
-    sfx = "" if band == "native" else "_h"
-    chin_rms, chin_mav = d[f"chin_rms{sfx}"], d[f"chin_mav{sfx}"]
-    legs = d["legs"] if len(d["legs"]) else None
-    rows = [score_night(chin_rms, legs, env_fs, hyp, epoch_sec, m)
+    if band == "native_with_ecg":            # heartbeat left in: a sensitivity check
+        chin_rms, chin_mav = d["chin_rms_with_ecg"], None
+    else:
+        sfx = "" if band == "native" else "_h"
+        chin_rms, chin_mav = d[f"chin_rms{sfx}"], d[f"chin_mav{sfx}"]
+    unit_known = meta["chin_info"]["unit_known"]
+    rows = [score_night(chin_rms, env_fs, hyp, epoch_sec, m, unit_known)
             for m in METHODS.values()]
-    if meta["chin_info"]["unit_known"]:
+    if chin_mav is None:
+        rows.append({"method": "RAI", "error": "not computed for this band"})
+    elif unit_known:
         rows.append(rem_atonia_index(chin_mav, env_fs, hyp, epoch_sec))
     else:
         rows.append({"method": "RAI", "error": "chin EMG has no physical units"})

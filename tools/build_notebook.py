@@ -18,7 +18,7 @@ OUT = ROOT / "notebooks" / "RBD_RWA_CAP.ipynb"
 CODE_DIR = "/content/rbd-rwa"
 WORK_DIR = "/content/durable"
 DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
-FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/fetch.py",
+FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/rwa.py",
          "run_extract.py", "run_score.py"]
 
