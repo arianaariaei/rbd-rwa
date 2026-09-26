@@ -184,6 +184,50 @@ def main():
             + "  ".join(f"{k} FP {v:3.0f}%" for k, v in sorted(fp.items())))
     say()
 
+    # T9 ─────────────────────────────────────────────────────────────────────
+    say("T9  Background chin EMG level (5th percentile of 1 s REM RMS, uV), median [IQR]")
+    bg = base[(base.band == "native") & (base.method == "Montreal")]
+    if "background_phasic_uV" in bg:
+        for who, g in bg.groupby("who"):
+            v = g.background_phasic_uV.dropna()
+            if len(v):
+                say(f"  {who:<16} n={len(v):<5} {v.median():6.2f} [{v.quantile(.25):.2f}-{v.quantile(.75):.2f}]")
+    say()
+
+    # T10 ────────────────────────────────────────────────────────────────────
+    say("T10 Re-derived cut-offs, validated: leave-one-out CV on CAP, and 2,000 bootstrap")
+    say("    re-derivations for the uncertainty of the cut-off and of external false positives")
+    rng = np.random.default_rng(0)
+
+    def youden(p, n):
+        c = np.unique(np.r_[p, n])
+        j = (p[None, :] >= c[:, None]).mean(axis=1) - (n[None, :] >= c[:, None]).mean(axis=1)
+        return c[int(np.argmax(j))]
+
+    melted = base[base.band == "native"].melt(
+        id_vars=["cohort", "record", "who", "method", "chin_fs", "unit_known"],
+        value_vars=[m for m in METRICS if m in base], var_name="metric").dropna(subset=["value"])
+    for (meth, metric), g in melted.groupby(["method", "metric"]):
+        s = (g.cohort == "cap") & (g.chin_fs == 512) & g.unit_known.astype(bool)
+        pos = g.loc[s & (g.who == "CAP RBD"), "value"].to_numpy(float)
+        neg = g.loc[s & ~g.who.isin(["CAP RBD", "CAP healthy"]), "value"].to_numpy(float)
+        if len(pos) < 5 or len(neg) < 5:
+            continue
+        cv_tp = np.mean([pos[i] >= youden(np.delete(pos, i), neg) for i in range(len(pos))])
+        cv_fp = np.mean([neg[i] >= youden(pos, np.delete(neg, i)) for i in range(len(neg))])
+        ext = {k: v.value.to_numpy(float) for k, v in g[g.cohort.isin(["chal18", "hmc"])].groupby("cohort")}
+        cuts, fps = [], {k: [] for k in ext}
+        for _ in range(2000):
+            c = youden(rng.choice(pos, len(pos)), rng.choice(neg, len(neg)))
+            cuts.append(c)
+            for k, v in ext.items():
+                fps[k].append((v >= c).mean())
+        q = lambda a: f"{100 * np.median(a):.0f} [{100 * np.percentile(a, 2.5):.0f}-{100 * np.percentile(a, 97.5):.0f}]"
+        say(f"  {meth:<9} {metric:<17} cut-off {np.median(cuts):6.2f} [{np.percentile(cuts, 2.5):.2f}-"
+            f"{np.percentile(cuts, 97.5):.2f}]  CV sens {100 * cv_tp:3.0f}%  CV FP {100 * cv_fp:3.0f}%  "
+            + "  ".join(f"{k} FP {q(v)}" for k, v in sorted(fps.items())))
+    say()
+
     # T8 ─────────────────────────────────────────────────────────────────────
     say("T8  Heartbeat artefact in chin EMG (heartbeat-locked ratio; 1 = none), median [p90]")
     import json

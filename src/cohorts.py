@@ -154,7 +154,35 @@ class HMC:
                     ecg=ecg, fs_ecg=fs_e, legs=[], hypnogram=hyp, flags={}, extra={})
 
 
-COHORTS = {"chal18": Chal18(), "hmc": HMC()}
+class HMCDegraded(HMC):
+    """
+    HMC recordings re-acquired, in software, the way the MGH chin EMG was:
+    optionally resampled to `fs_out` and quantised to `lsb_uv` microvolt steps.
+    MGH stores chin EMG at 200 Hz with 1 uV resolution, close to the amplitude
+    of quiet REM; comparing HMC with its degraded copies isolates how much of
+    a site difference that hardware alone can create.
+    """
+    def __init__(self, name, fs_out=None, lsb_uv=None):
+        self.name, self.fs_out, self.lsb_uv = name, fs_out, lsb_uv
+
+    def read(self, rec, files):
+        d = super().read(rec, files)
+        x, fs = d["chin"], d["fs"]
+        if self.fs_out and self.fs_out != fs:
+            from fractions import Fraction
+            from scipy.signal import resample_poly
+            f = Fraction(int(self.fs_out), int(fs)).limit_denominator(1000)
+            x = resample_poly(x, f.numerator, f.denominator)
+            fs = float(self.fs_out)
+        if self.lsb_uv:
+            x = np.round(x / self.lsb_uv) * self.lsb_uv
+        d.update(chin=x, fs=fs)
+        return d
+
+
+COHORTS = {"chal18": Chal18(), "hmc": HMC(),
+           "hmc_q1uv": HMCDegraded("hmc_q1uv", lsb_uv=1.0),
+           "hmc_mgh": HMCDegraded("hmc_mgh", fs_out=200, lsb_uv=1.0)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════

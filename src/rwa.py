@@ -214,14 +214,21 @@ def _runs(rem2d, ep, env_fs, thr, min_s, max_s):
 
 
 def _background(rem2d, nrem_1s, env_fs, how):
-    """Background from 1 s RMS values of REM or of N2/N3 (see baseline_amplitude)."""
-    if how.endswith("nrem"):
+    """
+    Background from 1 s RMS values of REM or of N2/N3 (see baseline_amplitude).
+    how = "<stat>_<stage>" with stat "min" or "pNN" (NN-th percentile) and stage
+    "rem" or "nrem", e.g. "p5_rem" (the default), "p25_rem", "min_nrem".
+    """
+    stat, stage = how.split("_", 1)
+    if stage == "nrem":
         vals = nrem_1s
     else:
         vals, _ = mini_epoch_rms(rem2d.reshape(-1), env_fs, 1.0)
     if len(vals) < 10:
         return np.nan
-    return float(vals.min() if how.startswith("min") else np.percentile(vals, 5))
+    if stat == "min":
+        return float(vals.min())
+    return float(np.percentile(vals, float(stat[1:])))
 
 
 def _mini(mask2d, env_fs, seconds):
