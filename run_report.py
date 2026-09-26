@@ -30,6 +30,9 @@ from src import config
 
 MIN_REM = 10.0
 DECIDING = ["Montreal", "SINBAR", "RAI"]          # methods with a published cut-off
+# Recordings the data providers withdrew (HMC v1.1 release notes: erroneous,
+# unfixable signal data) but that are still downloadable.
+WITHDRAWN = {("hmc", "SN014"), ("hmc", "SN064"), ("hmc", "SN135")}
 
 
 def wilson(k, n, z=1.96):
@@ -57,6 +60,7 @@ def groups(df):
 
 def main():
     df = pd.read_csv(config.RESULTS / "rwa_scores.csv")
+    df = df[~df.apply(lambda r: (r.cohort, r.record) in WITHDRAWN, axis=1)]
     df = groups(df)
     base = df[(df.excluded.fillna("") == "") & (df.rem_minutes >= MIN_REM)]
     lines = []
