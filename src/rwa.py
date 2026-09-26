@@ -40,6 +40,9 @@ import numpy as np
 
 REM_CODE = 4
 NREM_CODES = (2, 3)
+# The 5th percentile of 1 s RMS values of band-limited white noise, relative to
+# its RMS (0.910-0.913 for 10-95/100 Hz at 200, 256 and 512 Hz, simulated).
+NOISE_P5_RATIO = 0.91
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -103,9 +106,8 @@ def runs_above(env, env_fs, threshold, min_s=0.1, max_s=None):
     bound separates phasic bursts from sustained tonic activity.
     """
     above = env > threshold
-    out = np.zeros(len(env), dtype=bool)
     if not above.any():
-        return out
+        return np.zeros(len(env), dtype=bool)
     edges = np.diff(np.r_[0, above.astype(np.int8), 0])
     starts = np.flatnonzero(edges == 1)
     stops = np.flatnonzero(edges == -1)
@@ -113,9 +115,12 @@ def runs_above(env, env_fs, threshold, min_s=0.1, max_s=None):
     keep = dur >= min_s
     if max_s is not None:
         keep &= dur <= max_s
-    for a, b in zip(starts[keep], stops[keep]):
-        out[a:b] = True
-    return out
+    # runs never touch (a stop is always followed by a sample below threshold),
+    # so +1 at each kept start and -1 at its stop, summed, marks the runs
+    step = np.zeros(len(env) + 1, dtype=np.int32)
+    step[starts[keep]] += 1
+    step[stops[keep]] -= 1
+    return np.cumsum(step[:-1]) > 0
 
 
 def _blocks(mask_idx, width):
@@ -144,6 +149,45 @@ class Method:
     phasic_epoch_rule: int = None # AASM: >= this many phasic mini-epochs / 30 s
     cutoffs: dict = field(default_factory=dict)   # metric -> % (positive if >=)
     verify: tuple = field(default_factory=tuple)
+    # How "k x background" becomes an amplitude threshold (see `threshold`):
+    # "relative" as published, "floor" corrected for the noise floor, "clamp"
+    # with the background never taken below ref_floor_uv.
+    mode: str = "relative"
+    ref_floor_uv: float = None
+    guard_mult: float = 1.5
+
+
+def threshold(method, k, b):
+    """
+    The amplitude (uV RMS) that "activity above k x background" means for a
+    night whose background is b.
+
+    relative  k b, as published. Because b is mostly the recording's own noise
+              floor, the muscle activity this requires, sqrt(k^2 - 1) b, rises
+              and falls with the noise of the recording system.
+    floor     max(sqrt(n^2 + (k^2 - 1) B^2), g b) with B = ref_floor_uv and
+              n = b / NOISE_P5_RATIO the noise RMS that b implies: the muscle
+              activity required is fixed at what the published rule requires
+              on a system whose background is B, and the night's noise is
+              subtracted (in power) instead of multiplied. The guard g b keeps
+              noise alone from being counted: with g = 1.5, white noise puts a
+              0.1 s run above threshold in < 1% of mini-epochs (0 for tonic).
+    clamp     k max(b, B): the published rule with the background never taken
+              to be lower than B (an absolute floor, no subtraction).
+    """
+    if method.mode == "floor":
+        B, n = method.ref_floor_uv, b / NOISE_P5_RATIO
+        return max(float(np.sqrt(n * n + (k * k - 1.0) * B * B)), method.guard_mult * b)
+    if method.mode == "clamp":
+        return k * max(b, method.ref_floor_uv)
+    return k * b
+
+
+def floor_corrected(method, ref_uv, mode="floor", guard=1.5):
+    """A method's floor-corrected (or clamped) version, same name and cut-offs."""
+    import dataclasses
+    return dataclasses.replace(method, mode=mode, ref_floor_uv=float(ref_uv),
+                               guard_mult=guard)
 
 
 METHODS = {
@@ -261,14 +305,14 @@ def score_night(pack, method: Method, band="native", exclude=()):
         return out
 
     # ── tonic ────────────────────────────────────────────────────────────────
-    thr_t = method.tonic_mult * bt
+    thr_t = threshold(method, method.tonic_mult, bt)
     if method.tonic_abs_uv is not None and meta.get("unit_known", True):
         thr_t = min(thr_t, method.tonic_abs_uv)      # "2x background OR > 10 uV"
     above = _mini(env > thr_t, env_fs, method.tonic_epoch_s)
     tonic = above.mean(axis=1) > 0.5
 
     # ── phasic ───────────────────────────────────────────────────────────────
-    thr_p = method.phasic_mult * bp
+    thr_p = threshold(method, method.phasic_mult, bp)
     burst = _runs(env, ep, env_fs, thr_p, 0.1, method.phasic_max_s)
     phasic = _mini(burst, env_fs, method.phasic_mini_s).any(axis=1)
 
@@ -287,7 +331,7 @@ def score_night(pack, method: Method, band="native", exclude=()):
 
     # ── SINBAR "any": tonic, phasic or both, above the same amplitude ──────
     if method.any_mini_s:
-        active = _runs(env, ep, env_fs, method.any_mult * bp, 0.1, None)
+        active = _runs(env, ep, env_fs, threshold(method, method.any_mult, bp), 0.1, None)
         out["any_pct"] = round(100.0 * _mini(active, env_fs, method.any_mini_s)
                                .any(axis=1).mean(), 2)
 

@@ -21,7 +21,7 @@ DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
 FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/pack.py", "src/cohorts.py", "src/rwa.py",
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
-         "run_report.py", "run_figures.py", "run_ladder.py"]
+         "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py"]
 
 
 def md(text):
@@ -118,6 +118,14 @@ files stay on this machine (they are large) and only the results go to Drive.
              f"&& python run_cohort.py --cohort hmc --ladder --workers 3 "
              f"&& python run_cohort.py --cohort chal18 --ladder --limit 300 --workers 3 "
              f"&& python run_ladder.py"),
+        md("""
+## 5b. Floor-corrected criteria
+
+The published rules with the noise floor subtracted instead of multiplied, scored on
+every night as recorded and on the noise ladder, against the criteria fixed in advance
+(paper/preregistration_floor_corrected.md). About 15 minutes.
+"""),
+        code(f"!cd {CODE_DIR} && python run_floor.py"),
         md("## 6. Score every night with every method"),
         code(f"!cd {CODE_DIR} && python run_score.py {{RESULT_MIRROR}}"),
         md("## 7. Background definition sensitivity, then the report tables"),
