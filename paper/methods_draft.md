@@ -11,7 +11,7 @@ credential or data-use agreement (Table 1).
 | Cohort | Source | Nights | Population | Chin EMG | Licence |
 |---|---|---|---|---|---|
 | CAP | CAP Sleep Database, PhysioNet (Terzano et al. 2001) | 108 | 22 clinical RBD, 16 healthy, 40 NFLE, 10 PLM, 9 insomnia, 5 narcolepsy, 4 SDB, 2 bruxism (Parma, Italy) | 100-512 Hz, several systems | ODC-By 1.0 |
-| HMC | Haaglanden Medisch Centrum sleep staging database v1.1, PhysioNet | 148 | Patients referred for PSG for mixed sleep complaints (The Netherlands) | 256 Hz | CC BY 4.0 |
+| HMC | Haaglanden Medisch Centrum sleep staging database v1.1, PhysioNet | 151 | Patients referred for PSG for mixed sleep complaints (The Netherlands) | 256 Hz | CC BY 4.0 |
 | MGH | PhysioNet/CinC Challenge 2018 training set | 994 | Patients evaluated at the Massachusetts General Hospital sleep laboratory (USA) | 200 Hz, 1 uV resolution | ODC-By 1.0 |
 
 CAP is the only openly available source of polysomnograms from patients with RBD and
@@ -70,8 +70,9 @@ Four published approaches were implemented on the same REM epochs (Table 2).
 The visual methods define activity relative to "background" EMG, which human scorers
 judge by eye. Here background was operationalised as the 5th percentile of 1-s RMS
 amplitudes within REM (NREM for the AASM tonic criterion); the sensitivity of results
-to this choice is examined in Section 3.x. Where physical units were unavailable, the
-absolute (uV) criteria were not applied.
+to this choice is examined in Section 2.6. We refer to this per-night value as the
+night's quiet-REM level. Where physical units were unavailable, the absolute (uV)
+criteria were not applied.
 
 ## 2.5 Statistical analysis
 
@@ -85,7 +86,39 @@ excluding event-flagged REM epochs was assessed on paired calls. Positive predic
 values for screening were computed from the sensitivity in CAP RBD and the specificity
 in the pooled external cohorts across RBD prevalences of 1-10%.
 
-## 2.6 Reproducibility
+To ask whether automated scoring needs its own cut-offs, each continuous score was
+given a new cut-off maximising Youden's index for CAP RBD versus same-system patients,
+and the share of MGH and HMC nights above it was recorded. Because this re-uses the
+22 RBD patients, the cut-offs were validated by leave-one-out cross-validation (the
+cut-off re-derived without the held-out night) and their uncertainty by 2,000 bootstrap
+re-derivations, resampling RBD patients and same-system patients separately; for each
+bootstrap cut-off the external false-positive shares were recomputed, giving
+percentile intervals.
+
+To ask whether a night's own quiet-REM level shapes its verdict, nights were split into
+tertiles of that level within each external cohort, and in MGH its association with a
+positive call was estimated by logistic regression on log2 of the level (odds ratio per
+halving), adjusted for age, sex and apnea-hypopnea index.
+
+## 2.6 Sensitivity analyses
+
+*Background definition.* All nights were re-scored with the background of the relative
+criteria set to the minimum, or the 5th (default), 10th, 25th or 50th percentile, of
+1-s REM RMS, or the 5th percentile of 1-s N2/N3 RMS; the AASM tonic criterion kept its
+NREM definition throughout.
+
+*Recording hardware.* MGH stores chin EMG at 200 Hz in steps of 1 uV (WFDB gain
+1 unit/uV), while HMC stores it at 256 Hz in steps of 0.024 uV (16 bits over
++/-800 uV). To isolate what that storage
+format can do on its own, every HMC recording was passed through the pipeline again
+after its chin EMG had been (i) quantised to 1-uV steps, and (ii) additionally
+resampled to 200 Hz (polyphase filtering). Because the median quiet-REM level is lower
+in MGH (0.59 uV) than in HMC (1.52 uV), both were repeated after first scaling the HMC
+signal by 0.39, which places it where MGH sits relative to the quantisation step; the
+scaled signal without quantisation served as that comparison's reference. Each copy of
+HMC was processed exactly like the original cohorts.
+
+## 2.7 Reproducibility
 
 All code (Python; NumPy, SciPy, pandas, wfdb) is openly available and runs end-to-end
 from a single Google Colab notebook that downloads the public data, so every number in

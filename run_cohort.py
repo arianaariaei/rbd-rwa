@@ -115,7 +115,8 @@ def repack_cap(out_dir, mirror):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cohort", required=True)
-    ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--limit", type=int, default=0,
+                    help="stop once this many records are done (0 = all)")
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--keep-raw", action="store_true")
     ap.add_argument("--mirror", default=None,
@@ -139,10 +140,11 @@ def main():
     records = cohort.records()
     demo = cohort.demographics()
     todo = [r for r in records if not (out_dir / f"{r}.npz").exists()]
+    done = len(records) - len(todo)
     if args.limit:
-        todo = todo[: args.limit]
+        todo = todo[: max(0, args.limit - done)]
     config.describe()
-    print(f"\n{args.cohort}: {len(records)} records, {len(records) - len(todo)} done, "
+    print(f"\n{args.cohort}: {len(records)} records, {done} done, "
           f"{len(todo)} to process with {args.workers} workers\n", flush=True)
 
     t_start = time.time()

@@ -70,7 +70,8 @@ def main():
     t = pos.pivot_table(index=["method", "variant"], columns="who", values="positive",
                         aggfunc="mean") * 100
     cols = [c for c in ["CAP RBD", "CAP healthy", "CAP NFLE", "CAP PLM", "chal18", "hmc",
-                        "hmc_q1uv", "hmc_mgh"] if c in t.columns]
+                        "hmc_q1uv", "hmc_mgh", "hmc_low", "hmc_low_mgh", "chal18_noise"]
+            if c in t.columns]
     print(t[cols].round(0).to_string())
 
     print("\nRBD vs same-system CAP patients (AUC) by background definition")

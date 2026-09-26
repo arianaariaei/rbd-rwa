@@ -14,6 +14,16 @@ Prints (and writes to results/report.md):
   T5  removing REM epochs that contain respiratory events or arousals
   T6  positive predictive value of each method if used to screen a
       population in which a given share has RBD
+  T7  cut-offs re-derived for automated scoring (Youden, CAP RBD vs CAP
+      patients recorded on the same system) and the external nights they flag
+  T9  quiet-REM chin EMG level ("background") per group
+  T10 T7 validated: leave-one-out cross-validation, and bootstrap intervals
+      for the cut-offs and the external false-positive shares
+  T11 positive calls by quiet-REM level within cohorts, and in MGH the odds
+      ratio per halving of that level, adjusted for age, sex and AHI
+  T12 simulated recordings (hardware, amplitude, noise floor) against the
+      cohort they were made from, on the same nights
+  T8  heartbeat artefact in the chin EMG before and after its removal
 
 Nights with less than MIN_REM minutes of REM are left out, as clinical
 scoring would.
@@ -31,6 +41,9 @@ from src import config
 MIN_REM = 10.0
 DECIDING = ["Montreal", "SINBAR", "RAI"]          # methods with a published cut-off
 METRICS = ["tonic_pct", "phasic_pct", "phasic_epoch_pct", "any_pct", "atonia_loss"]
+# Software copies of a cohort (src/cohorts.py) and the cohort each one copies.
+SIMULATED = {"hmc_q1uv": "hmc", "hmc_mgh": "hmc", "hmc_low": "hmc", "hmc_low_mgh": "hmc_low",
+             "chal18_noise": "chal18"}
 # Recordings withdrawn by the data providers (HMC v1.1: erroneous signal data).
 # RECORDS no longer lists them; this guards against older downloads.
 WITHDRAWN = {("hmc", "SN014"), ("hmc", "SN064"), ("hmc", "SN135")}
@@ -226,6 +239,45 @@ def main():
         say(f"  {meth:<9} {metric:<17} cut-off {np.median(cuts):6.2f} [{np.percentile(cuts, 2.5):.2f}-"
             f"{np.percentile(cuts, 97.5):.2f}]  CV sens {100 * cv_tp:3.0f}%  CV FP {100 * cv_fp:3.0f}%  "
             + "  ".join(f"{k} FP {q(v)}" for k, v in sorted(fps.items())))
+    say()
+
+    # T11 ────────────────────────────────────────────────────────────────────
+    say("T11 Positive calls by quiet-REM level (tertiles of the background within each")
+    say("    cohort, native band) and, in MGH, the odds ratio per halving of that level")
+    quiet = base[(base.band == "native") & (base.method == "Montreal")][
+        ["cohort", "record", "background_phasic_uV"]].rename(columns={"background_phasic_uV": "quiet"})
+    nat = base[(base.band == "native") & base.method.isin(DECIDING)].merge(
+        quiet, on=["cohort", "record"], how="left").dropna(subset=["quiet", "positive"])
+    nat["y"] = nat.positive.map(lambda x: float(x in (True, "True", 1, 1.0)))
+    for (who, meth), g in nat[nat.cohort.isin(["chal18", "hmc"])].groupby(["who", "method"]):
+        t = pd.qcut(g["quiet"], 3, labels=False)
+        say(f"  {who:<8} {meth:<9} " + "   ".join(
+            f"{g['quiet'][t == k].median():.2f} uV: {100 * g.y[t == k].mean():3.0f}%" for k in range(3)))
+    if smf is not None:
+        for meth, g in nat[nat.cohort == "chal18"].groupby("method"):
+            g = g.dropna(subset=["age", "sex", "ahi"]).copy()
+            if g.y.nunique() < 2:
+                continue
+            g["halvings"] = -np.log2(g["quiet"])
+            g["age10"], g["male"], g["ahi10"] = g.age / 10.0, (g.sex == "M").astype(float), g.ahi / 10.0
+            m = smf.logit("y ~ halvings + age10 + male + ahi10", data=g).fit(disp=False)
+            lo, hi = np.exp(m.conf_int().loc["halvings"])
+            say(f"  MGH {meth:<9} OR per halving {np.exp(m.params['halvings']):.2f} [{lo:.2f}-{hi:.2f}]"
+                f" adjusted for age, sex and AHI (n={len(g)})")
+    say()
+
+    # T12 ────────────────────────────────────────────────────────────────────
+    say("T12 Simulated recordings against their source on the same nights (native band)")
+    for sim, src in SIMULATED.items():
+        pair = nat[nat.cohort == sim].merge(nat[nat.cohort == src], on=["record", "method"],
+                                            suffixes=("", "_src"))
+        if pair.empty:
+            continue
+        lvl = pair[pair.method == "Montreal"]
+        cells = [f"{meth} {100 * g.y_src.mean():.0f}% -> {100 * g.y.mean():.0f}%"
+                 for meth, g in pair.groupby("method")]
+        say(f"  {sim:<12} vs {src:<8} n={len(lvl):<4} level {lvl.quiet_src.median():.2f} -> "
+            f"{lvl.quiet.median():.2f} uV   " + "   ".join(cells))
     say()
 
     # T8 ─────────────────────────────────────────────────────────────────────

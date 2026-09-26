@@ -20,7 +20,8 @@ WORK_DIR = "/content/durable"
 DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
 FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/pack.py", "src/cohorts.py", "src/rwa.py",
-         "run_extract.py", "run_cohort.py", "run_score.py"]
+         "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
+         "run_report.py", "run_figures.py"]
 
 
 def md(text):
@@ -43,7 +44,7 @@ dataset used here is open (no application, no credential):
 | cohort | what | licence |
 |---|---|---|
 | CAP | 22 RBD patients + healthy sleepers + other sleep disorders (Italy) | ODC-By |
-| HMC | 148 clinical PSGs, Haaglanden Medisch Centrum (Netherlands) | CC BY 4.0 |
+| HMC | 151 clinical PSGs, Haaglanden Medisch Centrum (Netherlands) | CC BY 4.0 |
 | Challenge 2018 | 994 clinical PSGs, Massachusetts General Hospital (USA) | ODC-By |
 
 Each night is streamed from PhysioNet's open mirror, reduced to a 1-2 MB file
@@ -81,12 +82,47 @@ os.environ['RBD_DURABLE_DIR'] = '{WORK_DIR}'
     cells += [
         md("## 1. CAP: extract every night (~12 minutes), then pack"),
         code(f"!cd {CODE_DIR} && python run_extract.py && python run_cohort.py --cohort cap {{PACK_MIRROR}}"),
-        md("## 2. HMC: 148 nights (about 15 GB streamed, ~10 minutes)"),
+        md("## 2. HMC: 151 nights (about 15 GB streamed, ~10 minutes)"),
         code(f"!cd {CODE_DIR} && python run_cohort.py --cohort hmc --workers 3 {{PACK_MIRROR}}"),
         md("## 3. Challenge 2018: 994 nights (about 130 GB streamed, roughly an hour)"),
         code(f"!cd {CODE_DIR} && python run_cohort.py --cohort chal18 --workers 3 {{PACK_MIRROR}}"),
-        md("## 4. Score every night with every method"),
+        md("""
+## 4. Hardware simulation: HMC recorded the way MGH records chin EMG
+
+The same 151 HMC nights again, quantised to 1 uV steps (`hmc_q1uv`), and also
+resampled to 200 Hz (`hmc_mgh`), as the MGH chin EMG is stored. MGH's quiet
+REM level (~0.6 uV) is below that step while HMC's (~1.5 uV) is above it, so
+both are repeated after scaling HMC down to the MGH level (`hmc_low`,
+`hmc_low_mgh`). Any change against the matching undegraded copy is caused by
+the recording hardware alone (~25 minutes).
+"""),
+        code(f"!cd {CODE_DIR} && " + " && ".join(
+            f"python run_cohort.py --cohort {c} --workers 3 {{PACK_MIRROR}}"
+            for c in ("hmc_q1uv", "hmc_mgh", "hmc_low", "hmc_low_mgh"))),
+        md("""
+The reverse test: 300 MGH nights with white noise added to the chin EMG, which raises
+their quiet-REM level from ~0.6 uV to HMC's ~1.5 uV (`chal18_noise`, ~15 minutes).
+"""),
+        code(f"!cd {CODE_DIR} && python run_cohort.py --cohort chal18_noise --limit 300 "
+             f"--workers 3 {{PACK_MIRROR}}"),
+        md("## 5. Score every night with every method"),
         code(f"!cd {CODE_DIR} && python run_score.py {{RESULT_MIRROR}}"),
+        md("## 6. Background definition sensitivity, then the report tables"),
+        code(f"""
+!cd {CODE_DIR} && python run_sensitivity.py && python run_report.py
+if MIRROR:
+    !mkdir -p {{MIRROR}}/results && cp {WORK_DIR}/results/* {{MIRROR}}/results/
+"""),
+        md("## 7. Figures"),
+        code(f"""
+!cd {CODE_DIR} && python run_figures.py
+if MIRROR:
+    !mkdir -p {{MIRROR}}/figures && cp {WORK_DIR}/figures/* {{MIRROR}}/figures/
+from IPython.display import Image, display
+for name in sorted(os.listdir('{WORK_DIR}/figures')):
+    if name.endswith('.png'):
+        display(Image(f'{WORK_DIR}/figures/{{name}}', width=900))
+"""),
     ]
     nb = {"cells": cells,
           "metadata": {"colab": {"provenance": []},
