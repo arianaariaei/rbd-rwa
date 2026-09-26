@@ -230,6 +230,7 @@ def figures(base, remedy):
             ax.plot(h.level.median(), 100 * h.y.mean(), "*", ms=8, color=col)
         ax.set_xscale("log")
         ax.set_xticks([0.5, 1, 2, 4], ["0.5", "1", "2", "4"])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.set_xlabel("quiet-REM level (µV)")
         ax.set_title(m)
     axes[0].set_ylabel("nights flagged positive (%)")
@@ -267,7 +268,8 @@ def figures(base, remedy):
     ax.set_xticks(range(len(k)), [f"{r.method} {r.metric.split('_')[0]}\nLOO sens {100 * r.cv_sens:.0f}%"
                                   for r in k.itertuples()], fontsize=7)
     ax.set_ylabel("external nights flagged (%)")
-    ax.set_ylim(0, max(30, 100 * k[["fp_mgh", "fp_hmc"]].to_numpy().max() + 10))
+    top = max(max(r.ci_mgh[1], r.ci_hmc[1]) for r in k.itertuples())
+    ax.set_ylim(0, max(30, 100 * top + 5))
     ax.legend(frameon=False, fontsize=6.5)
     ax.set_title("B  Re-derived on harmonised CAP")
     save(fig, "fig7_harmonisation")
