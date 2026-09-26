@@ -90,6 +90,46 @@ def cap_records():
     return groups
 
 
+def cap_demographics():
+    """
+    Age and sex of every CAP subject, from the database's gender-age.xlsx,
+    keyed by record name. The sheet has no header and two typos ("SBD" for
+    sdb, "RDB11" for rbd11). Read with the standard library, so no Excel
+    package is needed. Returns {} if no mirror answers.
+    """
+    import io
+    import zipfile
+    import xml.etree.ElementTree as ET
+    raw = None
+    for base in CAP_MIRRORS:
+        try:
+            raw = urllib.request.urlopen(base + "gender-age.xlsx", timeout=60).read()
+            break
+        except Exception:
+            continue
+    if raw is None:
+        return {}
+    z = zipfile.ZipFile(io.BytesIO(raw))
+    m = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    shared = ["".join(t.text or "" for t in si.iter(m + "t"))
+              for si in ET.fromstring(z.read("xl/sharedStrings.xml")).iter(m + "si")]
+    out = {}
+    for row in ET.fromstring(z.read("xl/worksheets/sheet1.xml")).iter(m + "row"):
+        vals = []
+        for c in row.iter(m + "c"):
+            v = c.find(m + "v")
+            vals.append(shared[int(v.text)] if c.get("t") == "s"
+                        else (v.text if v is not None else ""))
+        if len(vals) < 3:
+            continue
+        rec = vals[0].strip().lower().replace("sbd", "sdb").replace("rdb", "rbd")
+        try:
+            out[rec] = {"sex": vals[1].strip().upper()[:1], "age": float(vals[2])}
+        except ValueError:
+            continue
+    return out
+
+
 def fetch_cap(record, scratch: Path):
     """Download one CAP recording (.edf + .txt) into scratch."""
     edf = download_any(record + ".edf", Path(scratch) / f"{record}.edf")

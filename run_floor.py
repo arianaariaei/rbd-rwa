@@ -21,6 +21,8 @@ against the criteria fixed in paper/preregistration_floor_corrected.md:
   FC6  gain: HMC scaled by 0.39, and the size of muscle activity per cohort
   FC7  Montreal phasic bursts up to 10 s instead of 15 s
   FC8  MGH: the floor by record batch, and the ladder's 300 against the rest
+  FC9  age: RBD against same-system CAP patients under 50 and aged 50 or over
+  FC10 CAP's healthy volunteers night by night (mixed recording systems)
 
 CAP RBD and CAP patients are the nights recorded on CAP's main system (512 Hz,
 microvolts): 21 RBD and 51 other patients.
@@ -338,6 +340,51 @@ def main():
     for name, g in (("ladder 300", mg[mg.record.isin(sub)]), ("the rest", mg[~mg.record.isin(sub)])):
         say(f"  {name:<10} n={len(g):<4} level {g.background_phasic_uV.median():.2f}  Montreal "
             f"{100 * g.y.mean():3.0f}%  SINBAR {100 * g.y_s.mean():3.0f}%  age {pd.to_numeric(g.age).mean():.0f}")
+    from scipy.stats import spearmanr
+    per = mg.groupby("batch").agg(level=("background_phasic_uV", "median"), m=("y", "mean"), s=("y_s", "mean"))
+    if len(per) >= 4:
+        say(f"  across batches, Spearman rho of median level with share positive: Montreal "
+            f"{spearmanr(per.level, per.m)[0]:+.2f}, SINBAR {spearmanr(per.level, per.s)[0]:+.2f} "
+            f"({len(per)} batches)")
+    say()
+
+    # FC9 ────────────────────────────────────────────────────────────────────
+    from src.fetch import cap_demographics
+    demo = cap_demographics()
+    if demo:
+        say("FC9 Age in CAP: RBD against same-system patients under 50 and aged 50 or over")
+        cap = nat[nat.who.isin(["CAP RBD", "CAP patients"])].copy()
+        cap["age"] = cap.record.map(lambda r: demo.get(r, {}).get("age"))
+        parts = {"patients < 50": lambda d: d[(d.who == "CAP patients") & (d.age < 50)],
+                 "patients >= 50": lambda d: d[(d.who == "CAP patients") & (d.age >= 50)],
+                 "RBD": lambda d: d[d.who == "CAP RBD"]}
+        one = cap[(cap.method == "Montreal") & (cap.variant == "published")]
+        say("  " + "   ".join(f"{k}: n={len(f(one))}, age {f(one).age.mean():.0f}" for k, f in parts.items()))
+        for meth in ("Montreal", "SINBAR"):
+            for variant in ("published", "FC"):
+                g = sel(cap, meth, variant)
+                say(f"  {meth + ' ' + variant:<20} flagged: " + "   ".join(
+                    f"{k} {100 * f(g).y.mean():3.0f}%" for k, f in parts.items()))
+        for meth, metrics in KEY.items():
+            for metric in metrics:
+                for variant in ("published", "FC"):
+                    g = sel(cap, meth, variant)
+                    r_ = parts["RBD"](g)[metric]
+                    say(f"  AUC {meth + ' ' + variant:<20} {metric:<11} vs all patients "
+                        f"{auc(r_, g[g.who == 'CAP patients'][metric])[0]:.3f}   vs patients >= 50 "
+                        f"{auc(r_, parts['patients >= 50'](g)[metric])[0]:.3f}")
+        say()
+
+    # FC10 ───────────────────────────────────────────────────────────────────
+    say("FC10 CAP healthy volunteers, night by night (mixed recording systems): positive")
+    say("     published / floor-corrected (- = not scored: no physical units)")
+    h = nat[nat.who == "CAP healthy"]
+    flag = lambda g: "-" if g.empty or pd.isna(g.y.iloc[0]) else str(int(g.y.iloc[0]))
+    for rec, g in h.groupby("record"):
+        mp = sel(g, "Montreal")
+        say(f"  {rec:<4} fs {g.chin_fs.iloc[0]:>5g}  units {'yes' if bool(g.unit_known.iloc[0]) else 'no ':<3}  "
+            f"level {mp.background_phasic_uV.iloc[0]:6.2f}   Montreal {flag(mp)}/{flag(sel(g, 'Montreal', 'FC'))}"
+            f"   SINBAR {flag(sel(g, 'SINBAR'))}/{flag(sel(g, 'SINBAR', 'FC'))}")
     say()
 
     say("Pre-specified criteria: " + "  ".join(f"{k}: {'met' if v else 'not met'}" for k, v in sorted(verdict.items())))
@@ -377,7 +424,7 @@ def figure(nat, lad):
     axes[0].set_ylabel("nights flagged positive (%)")
     axes[0].plot([], [], ":", color="k", lw=1, label="published")
     axes[0].plot([], [], "-", color="k", lw=1, label="floor-corrected")
-    axes[0].legend(frameon=False, fontsize=6, loc="upper right")
+    axes[0].legend(frameon=False, fontsize=6, loc="lower left", bbox_to_anchor=(0.0, 0.38))
     ax = axes[2]
     groups = ["CAP RBD", "CAP patients", "MGH", "HMC"]
     for j, (meth, variant, hatch) in enumerate([("Montreal", "published", ""), ("Montreal", "FC", "//"),

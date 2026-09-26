@@ -297,6 +297,9 @@ def score_night(pack, method: Method, band="native", exclude=()):
     if len(ep) < 2:
         out["error"] = "less than one minute of REM"
         return out
+    if method.mode != "relative" and not meta.get("unit_known", True):
+        out["error"] = "floor correction needs the EMG in physical units"
+        return out
 
     bt = _background(env, nrem, env_fs, method.tonic_baseline)
     bp = _background(env, nrem, env_fs, method.phasic_baseline)

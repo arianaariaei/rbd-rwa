@@ -13,7 +13,7 @@ Prints (and writes to results/report.md):
       hypopnea index (logistic regression, one model per method)
   T5  removing REM epochs that contain respiratory events or arousals
   T6  positive predictive value of each method if used to screen a
-      population in which a given share has RBD
+      population in which a given share has RBD (specificity per hospital)
   T7  cut-offs re-derived for automated scoring (Youden, CAP RBD vs CAP
       patients recorded on the same system) and the external nights they flag
   T9  quiet-REM chin EMG level ("background") per group
@@ -26,6 +26,7 @@ Prints (and writes to results/report.md):
   T13 MGH positive calls by apnea-hypopnea index, all REM and event-free REM
   T15 the same without transitional epochs (first and last of each REM period)
   T16 the floor signature: quietest N2/N3 over quietest REM chin level
+  T17 age in CAP: RBD against same-system patients under 50 and aged 50 or over
   T8  heartbeat artefact in the chin EMG before and after its removal
   T14 MGH positive calls by the residual heartbeat artefact
 
@@ -95,6 +96,13 @@ def main():
     df = pd.read_csv(config.RESULTS / "rwa_scores.csv")
     df = df[~df.apply(lambda r: (r.cohort, r.record) in WITHDRAWN, axis=1)]
     df = groups(df)
+    # CAP publishes age and sex in a spreadsheet, not in the recordings
+    from src.fetch import cap_demographics
+    cap_demo = cap_demographics()
+    if cap_demo:
+        cap = df.cohort == "cap"
+        df.loc[cap, "age"] = df.loc[cap, "record"].map(lambda r: cap_demo.get(r, {}).get("age"))
+        df.loc[cap, "sex"] = df.loc[cap, "record"].map(lambda r: cap_demo.get(r, {}).get("sex"))
     base = df[(df.excluded.fillna("") == "") & (df.rem_minutes >= MIN_REM)]
     lines = []
     say = lambda s="": (print(s), lines.append(s))
@@ -193,18 +201,19 @@ def main():
 
     # T6 ─────────────────────────────────────────────────────────────────────
     say("T6  Screening: positive predictive value at a given RBD prevalence")
-    say("    sensitivity from CAP RBD; specificity from the pooled external cohorts")
+    say("    sensitivity from CAP RBD; specificity from each external cohort and pooled")
     for meth in DECIDING:
         g = base[(base.band == "native") & (base.method == meth)]
         y = lambda s: s.dropna().map(lambda x: float(x in (True, "True", 1, 1.0)))
         sens = y(g[g.who == "CAP RBD"].positive)
-        spec = 1 - y(g[g.cohort.isin(["chal18", "hmc"])].positive)
-        if len(sens) == 0 or len(spec) == 0:
-            continue
-        se, sp = sens.mean(), spec.mean()
-        ppv = [se * p / (se * p + (1 - sp) * (1 - p)) for p in (0.01, 0.02, 0.05, 0.10)]
-        say(f"  {meth:<9} sens {100 * se:.0f}%  spec {100 * sp:.0f}%   PPV at 1/2/5/10% prevalence: "
-            + " / ".join(f"{100 * v:.0f}%" for v in ppv))
+        for name, cohorts in (("pooled", ["chal18", "hmc"]), ("MGH", ["chal18"]), ("HMC", ["hmc"])):
+            spec = 1 - y(g[g.cohort.isin(cohorts)].positive)
+            if len(sens) == 0 or len(spec) == 0:
+                continue
+            se, sp = sens.mean(), spec.mean()
+            ppv = [se * p / (se * p + (1 - sp) * (1 - p)) for p in (0.01, 0.02, 0.05, 0.10)]
+            say(f"  {meth:<9} {name:<6} sens {100 * se:.0f}%  spec {100 * sp:.0f}%   PPV at 1/2/5/10% "
+                "prevalence: " + " / ".join(f"{100 * v:.0f}%" for v in ppv))
 
     say()
 
@@ -347,6 +356,33 @@ def main():
         if len(r) >= 5:
             say(f"  {who:<16} n={len(r):<5} {r.median():.2f} [{r.quantile(.25):.2f}-{r.quantile(.75):.2f}]")
     say()
+
+    # T17 ────────────────────────────────────────────────────────────────────
+    if cap_demo:
+        from run_sensitivity import auc
+        yes = lambda s: s.dropna().map(lambda x: float(x in (True, "True", 1, 1.0)))
+        say("T17 Age in CAP: RBD patients against same-system patients under 50 and aged 50 or")
+        say("    over (native band, published cut-offs; RBD and patients on the main system)")
+        cap = base[(base.cohort == "cap") & (base.band == "native")]
+        same = (cap.chin_fs == 512) & cap.unit_known.astype(bool)
+        rbd = cap[same & (cap.who == "CAP RBD")]
+        pat = cap[same & ~cap.who.isin(["CAP RBD", "CAP healthy"])]
+        parts = {"patients < 50": pat[pat.age < 50], "patients >= 50": pat[pat.age >= 50], "RBD": rbd}
+        for name, g in parts.items():
+            a = g.drop_duplicates("record").age
+            say(f"  {name:<15} n={len(a):<3} age {a.mean():.0f} +/- {a.std():.0f} ({a.min():.0f}-{a.max():.0f}), "
+                f"diagnoses: " + ", ".join(f"{k.replace('CAP ', '')} {v}" for k, v in
+                                          g.drop_duplicates('record').who.value_counts().items()))
+        for meth in DECIDING:
+            say(f"  {meth:<9} flagged: " + "   ".join(
+                f"{name} {100 * yes(g[g.method == meth].positive).mean():3.0f}%" for name, g in parts.items()))
+        old = parts["patients >= 50"]
+        for meth, metric in [("Montreal", "tonic_pct"), ("Montreal", "phasic_pct"),
+                             ("SINBAR", "any_pct"), ("RAI", "atonia_loss")]:
+            r_ = rbd[rbd.method == meth][metric]
+            say(f"  AUC {meth:<9} {metric:<12} vs all patients {auc(r_, pat[pat.method == meth][metric]):.3f}"
+                f"   vs patients >= 50 {auc(r_, old[old.method == meth][metric]):.3f}")
+        say()
 
     # T8 ─────────────────────────────────────────────────────────────────────
     say("T8  Heartbeat artefact in chin EMG (heartbeat-locked ratio; 1 = none), median [p90]")
