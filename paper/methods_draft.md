@@ -1,7 +1,7 @@
 # Methods (draft)
 
-*Working title:* Published cut-offs for REM sleep without atonia do not transfer across
-automated scoring and recording sites: an open multi-cohort analysis
+*Working title:* Measured against the noise floor: why published cut-offs for REM sleep
+without atonia do not transfer across recording sites - an open multi-cohort analysis
 
 ## 2.1 Data sources
 
@@ -117,6 +117,13 @@ in MGH (0.59 uV) than in HMC (1.52 uV), both were repeated after first scaling t
 signal by 0.39, which places it where MGH sits relative to the quantisation step; the
 scaled signal without quantisation served as that comparison's reference. Each copy of
 HMC was processed exactly like the original cohorts.
+
+*Noise floor.* The reverse manipulation tested whether the lower quiet-REM level of MGH
+could itself produce its higher positivity: white Gaussian noise (standard deviation
+1.5 uV, seeded by record name) was added to the chin EMG of the first 300 MGH recordings
+in the database's record list, which raises the expected quiet-REM level from 0.59 uV
+to about 1.5 uV, HMC's median. Each noisy recording was compared with the same night as
+recorded.
 
 ## 2.7 Reproducibility
 
