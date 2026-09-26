@@ -116,15 +116,11 @@ class Chal18:
 class HMC:
     name, db, mains = "hmc", "hmc-sleep-staging/1.1", 50.0
     STAGES = {"W": 0, "N1": 1, "N2": 2, "N3": 3, "R": 4}
-    # Release notes of v1.1: "recordings SN014, SN064, and SN135 were removed
-    # after it was detected that these recordings contained erroneous (and
-    # unfixable) signal data" - yet RECORDS still lists them and the files
-    # are still served.
-    EXCLUDE = {"SN014", "SN064", "SN135"}
+    # v1.1 lists 151 recordings: SN001-SN154 minus SN014, SN064 and SN135,
+    # which the release notes withdrew for erroneous, unfixable signal data.
 
     def records(self):
-        return [r for r in (Path(x).stem for x in _read_text(self.db, "RECORDS").split())
-                if r not in self.EXCLUDE]
+        return [Path(x).stem for x in _read_text(self.db, "RECORDS").split()]
 
     def demographics(self):
         return {}                       # only group-level age/sex are published

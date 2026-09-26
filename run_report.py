@@ -30,8 +30,8 @@ from src import config
 
 MIN_REM = 10.0
 DECIDING = ["Montreal", "SINBAR", "RAI"]          # methods with a published cut-off
-# Recordings the data providers withdrew (HMC v1.1 release notes: erroneous,
-# unfixable signal data) but that are still downloadable.
+# Recordings withdrawn by the data providers (HMC v1.1: erroneous signal data).
+# RECORDS no longer lists them; this guards against older downloads.
 WITHDRAWN = {("hmc", "SN014"), ("hmc", "SN064"), ("hmc", "SN135")}
 
 
