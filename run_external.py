@@ -314,6 +314,7 @@ def figure(one, rows, floor):
     axes[0].set_ylabel("nights flagged positive (%)")
     axes[0].plot([], [], "o", color="k", mfc="white", label="published")
     axes[0].plot([], [], "o", color="k", label="floor-corrected")
+    axes[0].legend(frameon=False, fontsize=6, loc="upper right")
     axes[1].legend(frameon=False, fontsize=6, loc="upper right", ncol=2)
     save(fig, "fig9_external")
 

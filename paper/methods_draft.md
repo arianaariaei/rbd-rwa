@@ -202,7 +202,29 @@ record muscle activity on a comparable scale. For every night we computed the me
 (b / 0.91)^2 subtracted, and compared the medians between cohorts; a ratio within 0.67-1.5
 was fixed in advance as comparable.
 
-## 2.8 Reproducibility
+## 2.8 External cohorts (pre-specified)
+
+To test the findings on recording systems not used to obtain them, three further
+request-free cohorts were processed with the unchanged pipeline after the predictions had
+been committed (Supplement S3): BOAS (OpenNeuro ds005555, CC0; 128 nights of 100 adults
+recruited from the general population without psychotropic medication or severe disease;
+Micromed SD plus, bipolar chin EMG at 256 Hz; consensus AASM stages of three scorers),
+DOD-O (Dreem Open Datasets, Zenodo 15900394, MIT licence; 55 patients with suspected
+sleep-disordered breathing at the Stanford Sleep Medicine Center; Somnomedics Somno HD) and
+DOD-H (same release; 25 healthy volunteers, French Armed Forces Biomedical Research Institute;
+Compumedics Siesta); both Dreem sets provide chin EMG and ECG at 250 Hz and consensus stages of
+five scorers. BOAS has no ECG channel; heartbeats were searched for on the chin EMG itself
+with the same detector and plausibility test, and removed only where they passed it. For
+BOAS, each participant's first recording was analysed (all 128 nights as a sensitivity
+analysis). Six predictions were fixed in advance: comparable muscle scale (net N2/N3 level
+within 0.67-1.5 times MGH's), at least 30% of healthy nights flagged by the published SINBAR
+criterion on systems with a floor below 1 uV, agreement between healthy cohorts once the
+floor is subtracted, a negative rank correlation between cohort floor and published SINBAR
+positivity that weakens under floor correction, specificity of the SINBAR-FC cut-off
+re-derived on CAP (<= 10% of healthy and <= 20% of DOD-O nights flagged), and DOD-O's
+published positivity within 10 points of MGH's noise-ladder curve at DOD-O's floor.
+
+## 2.9 Reproducibility
 
 All code (Python; NumPy, SciPy, pandas, wfdb) is openly available and runs end-to-end
 from a single Google Colab notebook that downloads the public data, so every number in
