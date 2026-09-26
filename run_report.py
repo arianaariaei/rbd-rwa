@@ -30,6 +30,7 @@ from src import config
 
 MIN_REM = 10.0
 DECIDING = ["Montreal", "SINBAR", "RAI"]          # methods with a published cut-off
+METRICS = ["tonic_pct", "phasic_pct", "phasic_epoch_pct", "any_pct", "atonia_loss"]
 # Recordings withdrawn by the data providers (HMC v1.1: erroneous signal data).
 # RECORDS no longer lists them; this guards against older downloads.
 WITHDRAWN = {("hmc", "SN014"), ("hmc", "SN064"), ("hmc", "SN135")}
@@ -158,6 +159,49 @@ def main():
         ppv = [se * p / (se * p + (1 - sp) * (1 - p)) for p in (0.01, 0.02, 0.05, 0.10)]
         say(f"  {meth:<9} sens {100 * se:.0f}%  spec {100 * sp:.0f}%   PPV at 1/2/5/10% prevalence: "
             + " / ".join(f"{100 * v:.0f}%" for v in ppv))
+
+    say()
+
+    # T7 ─────────────────────────────────────────────────────────────────────
+    say("T7  Cut-offs re-derived for automated scoring (Youden, CAP RBD vs same-system")
+    say("    patients) and the share of external nights they flag, native band")
+    for (meth, metric), g in base[base.band == "native"].melt(
+            id_vars=["cohort", "record", "who", "method", "chin_fs", "unit_known"],
+            value_vars=[m for m in METRICS if m in base], var_name="metric") \
+            .dropna(subset=["value"]).groupby(["method", "metric"]):
+        s = (g.cohort == "cap") & (g.chin_fs == 512) & g.unit_known.astype(bool)
+        pos = g.loc[s & (g.who == "CAP RBD"), "value"].to_numpy()
+        neg = g.loc[s & ~g.who.isin(["CAP RBD", "CAP healthy"]), "value"].to_numpy()
+        if len(pos) < 5 or len(neg) < 5:
+            continue
+        cands = np.unique(np.r_[pos, neg])
+        j = [(pos >= c).mean() - (neg >= c).mean() for c in cands]
+        c = cands[int(np.argmax(j))]
+        ext = g.loc[g.cohort.isin(["chal18", "hmc"])]
+        fp = {k: 100 * (v.value >= c).mean() for k, v in ext.groupby("cohort")}
+        say(f"  {meth:<9} {metric:<17} cut-off {c:7.2f}: sens {100 * (pos >= c).mean():3.0f}%  "
+            f"same-system FP {100 * (neg >= c).mean():3.0f}%  "
+            + "  ".join(f"{k} FP {v:3.0f}%" for k, v in sorted(fp.items())))
+    say()
+
+    # T8 ─────────────────────────────────────────────────────────────────────
+    say("T8  Heartbeat artefact in chin EMG (heartbeat-locked ratio; 1 = none), median [p90]")
+    import json
+    for cdir in sorted((config.DURABLE / "packs").glob("*")):
+        before, after = [], []
+        for p in cdir.glob("*.npz"):
+            try:
+                meta = json.loads(str(np.load(p)["meta"]))
+            except Exception:
+                continue
+            e = meta.get("ecg") or meta.get("chin_info", {}).get("ecg") or {}
+            if e.get("beats"):
+                before.append(e.get("artifact_ratio_before", np.nan))
+                after.append(e.get("artifact_ratio_after", np.nan))
+        if before:
+            b, a = np.array(before, float), np.array(after, float)
+            say(f"  {cdir.name:<7} n={len(b):<5} before {np.nanmedian(b):.2f} [{np.nanpercentile(b, 90):.2f}]"
+                f"   after {np.nanmedian(a):.2f} [{np.nanpercentile(a, 90):.2f}]")
 
     out = config.RESULTS / "report.md"
     out.write_text("```\n" + "\n".join(lines) + "\n```\n", encoding="utf-8")
