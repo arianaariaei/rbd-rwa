@@ -1,57 +1,67 @@
-# RWA quantification agreement in REM sleep behaviour disorder
+# Measured against the noise floor: REM sleep without atonia across open sleep cohorts
 
-Do the different published ways of measuring **REM sleep without atonia (RWA)**
-agree with each other on the same patients — and does the choice change who is
-diagnosed?
+Automated scoring of REM sleep without atonia (RWA) - the polysomnographic marker of REM
+sleep behaviour disorder (RBD) - with the published Montreal, SINBAR, AASM and REM Atonia
+Index criteria, applied through one open pipeline to openly licensed polysomnograms.
 
-RWA is the polysomnographic criterion for REM sleep behaviour disorder (RBD),
-and isolated RBD is the strongest known prodromal marker of Parkinson's disease
-and related synucleinopathies. Several quantification methods are in concurrent
-use (Montreal, SINBAR, AASM, REM Atonia Index, and automated tools such as
-RBDtector and Ikelos-RWA). They differ in mini-epoch length, which muscles are
-scored, amplitude criteria, and diagnostic cut-offs.
+Main findings so far (details in `paper/`):
 
-Published comparisons pool performance figures reported *separately* across
-different cohorts. The 2022 systematic review in *SLEEP* states that these
-approaches have "not been systematically analyzed" and reports no concordance
-between methods on identical recordings.
+- The published cut-offs flag very different shares of patients at different hospitals.
+- The background the relative criteria are multiples of is, in effect, the recording
+  system's noise floor: quieter systems flag more patients, noisier ones miss RBD.
+- A floor-corrected version of the criteria (noise subtracted, not multiplied), fixed in
+  advance, removes the dependence on noise and the site difference.
 
-## Design
+## Data (all request-free)
 
-Runs on **Google Colab**. Raw recordings are disposable, derived data is not:
+| cohort | what | licence |
+|---|---|---|
+| CAP (PhysioNet) | 22 RBD patients, other sleep disorders, healthy sleepers (Italy) | ODC-By |
+| HMC (PhysioNet) | 151 clinical PSGs, Haaglanden Medisch Centrum (Netherlands) | CC BY 4.0 |
+| Challenge 2018 (PhysioNet) | 994 clinical PSGs, Massachusetts General Hospital (USA) | ODC-By |
+| BOAS (OpenNeuro ds005555) | 128 nights of adults from the general population (Spain) | CC0 |
+| DOD-O / DOD-H (Zenodo 15900394) | 55 sleep-clinic patients (Stanford) / 25 healthy volunteers (France) | MIT |
 
-    download one recording  ->  extract envelope + hypnogram  ->  save to Drive
-                            ->  delete the raw file
+## Running it
 
-A raw CAP recording is ~430 MB; the derived file is a few MB. Disk use stays
-flat regardless of cohort size, and losing a Colab session costs at most one
-recording.
+Everything runs in Google Colab; nothing is downloaded to the local machine. Open
+`notebooks/RBD_RWA.ipynb` in Colab and choose Runtime -> Run all. The notebook carries its
+own copy of the code (`%%writefile` cells), streams each recording from its open mirror,
+reduces it to a 1-2 MB "pack" (REM chin EMG envelope at 50 Hz plus 1-s N2/N3 summaries),
+copies the pack to Google Drive (`MyDrive/rbd-rwa`) and deletes the raw file, so a
+disconnected session resumes where it stopped. Regenerate the notebook after changing any
+source file:
+
+    python tools/build_notebook.py
 
 ## Layout
 
-    src/config.py    Colab/Drive-aware paths; durable vs scratch
-    src/fetch.py     resumable downloads (PhysioNet TLS drops often)
-    src/cap.py       CAP annotation parsing and EDF clock alignment
-    src/extract.py   raw PSG -> rectified EMG envelope + hypnogram
-    run_extract.py   streaming pipeline, resumable via a manifest
-    notebooks/RBD_RWA_Colab.ipynb
+    src/config.py     Colab/Drive-aware paths (durable vs scratch)
+    src/fetch.py      resumable downloads; CAP record lists and ages
+    src/edf.py        EDF reader at native sampling rates
+    src/cap.py        CAP annotations and EDF clock alignment
+    src/ecg.py        R-peak detection and heartbeat subtraction
+    src/extract.py    band-pass, notch, envelopes (CAP full-night files)
+    src/cohorts.py    cohort adapters, software re-recordings, the noise ladder
+    src/pack.py       compact per-night storage
+    src/rwa.py        the RWA methods, published and floor-corrected
+    run_extract.py    CAP extraction
+    run_cohort.py     download -> pack for any cohort (resumable, parallel)
+    run_score.py      every method on every pack -> results/rwa_scores.csv
+    run_report.py     the paper's tables (T1-T17)
+    run_sensitivity.py  background definitions
+    run_figures.py    figures 1-5
+    run_ladder.py     the noise ladder (pre-specified), figures 6-7
+    run_floor.py      floor-corrected criteria (pre-specified), figure 8
+    run_external.py   external cohorts (pre-specified), figure 9
+    tools/build_notebook.py   writes notebooks/RBD_RWA.ipynb
 
-## Data
+## Paper
 
-| Source | Content | Access |
-|---|---|---|
-| CAP Sleep Database (PhysioNet) | 22 RBD + 16 healthy, chin EMG + leg EMG | open |
-| NAPS (NSRR) | isolated RBD cohort, centrally scored at Mayo | data request |
-| MrOS (NSRR) | 3,135 PSGs, older men | data request |
+`paper/` holds the drafts (methods, results, discussion, abstract, figure legends,
+references, STARD checklist), the result records, the audit, and three pre-registrations,
+each committed before its analysis was run: `preregistration_noise_ladder.md`,
+`preregistration_floor_corrected.md`, `preregistration_external.md`.
 
-CAP is for building and validating the pipeline. Its RBD subjects are clinical
-RBD, not *isolated* RBD — NAPS is the cohort that matters for the prodromal
-Parkinson's framing, and results on CAP should not be presented as such.
-
-## Alignment warning
-
-CAP annotations use wall-clock times; the signal starts whenever the EDF header
-says. In `rbd1` these differ by **2.6 hours**. Aligning annotation #0 to epoch #0
-would shift every sleep stage against the signal and silently corrupt every
-downstream measurement. `build_hypnogram` computes the offset explicitly and
-reports it; the notebook checks REM latency as a sanity test.
+CAP annotations use wall-clock times, while the signal starts whenever the EDF header says
+(in `rbd1` the two differ by 2.6 hours); `src/cap.py` computes the offset explicitly.
