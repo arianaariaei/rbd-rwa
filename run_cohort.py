@@ -49,7 +49,50 @@ def _work(name, rec, demo, scratch, out_path, keep_raw):
             shutil.rmtree(folder, ignore_errors=True)
 
 
-def repack_cap(out_dir):
+class Mirror:
+    """
+    Best-effort copy of finished packs to a second place (Google Drive). The
+    Drive mount in Colab can drop out under load ("Transport endpoint is not
+    connected"), so work happens on local disk and each small pack is copied
+    over as it is finished; if the mirror fails, the run carries on.
+    """
+    def __init__(self, path):
+        self.path = Path(path) if path else None
+        self.ok = self.path is not None
+        if self.ok:
+            try:
+                self.path.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                self._fail(e)
+
+    def _fail(self, e):
+        if self.ok:
+            print(f"  (mirror unavailable, continuing without it: {e})", flush=True)
+        self.ok = False
+
+    def restore(self, out_dir):
+        """Bring back packs saved by an earlier session, so they are skipped."""
+        if not self.ok:
+            return 0
+        n = 0
+        try:
+            for p in self.path.glob("*.npz"):
+                if not (out_dir / p.name).exists():
+                    shutil.copy2(p, out_dir / p.name)
+                    n += 1
+        except OSError as e:
+            self._fail(e)
+        return n
+
+    def push(self, p):
+        if self.ok:
+            try:
+                shutil.copy2(p, self.path / Path(p).name)
+            except OSError as e:
+                self._fail(e)
+
+
+def repack_cap(out_dir, mirror):
     """CAP was extracted to full-night files; convert them to packs."""
     from src.extract import load_derived
     from src.pack import pack_from_full
@@ -58,9 +101,14 @@ def repack_cap(out_dir):
         out = out_dir / p.name
         if out.exists():
             continue
-        pack = pack_from_full(load_derived(p))
+        try:
+            pack = pack_from_full(load_derived(p))
+        except Exception as e:                       # unreadable file: report, go on
+            print(f"  {p.name}: cannot read ({type(e).__name__}: {e})", flush=True)
+            continue
         pack["meta"]["cohort"] = "cap"
         save_pack(out, pack)
+        mirror.push(out)
     print(f"cap: {len(list(out_dir.glob('*.npz')))} packs in {out_dir}")
 
 
@@ -70,12 +118,18 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--keep-raw", action="store_true")
+    ap.add_argument("--mirror", default=None,
+                    help="also copy each finished pack here (e.g. a Drive folder)")
     args = ap.parse_args()
 
     out_dir = config.DURABLE / "packs" / args.cohort
     out_dir.mkdir(parents=True, exist_ok=True)
+    mirror = Mirror(Path(args.mirror) / args.cohort if args.mirror else None)
+    restored = mirror.restore(out_dir)
+    if restored:
+        print(f"restored {restored} packs from {mirror.path}", flush=True)
     if args.cohort == "cap":
-        repack_cap(out_dir)
+        repack_cap(out_dir, mirror)
         return
 
     from src.cohorts import COHORTS
@@ -103,6 +157,7 @@ def main():
             else:
                 m["done"][rec] = info
                 m["failed"].pop(rec, None)
+                mirror.push(out_dir / f"{rec}.npz")
                 print(f"[{i}/{len(todo)}] {rec}  REM {info['rem_min']} min  "
                       f"ECG x{info['ecg']}  ({info['download_s']}s download, "
                       f"{info['seconds']}s total)", flush=True)

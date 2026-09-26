@@ -73,10 +73,27 @@ def score_everything():
 
 
 def main():
+    import argparse
+    import shutil
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mirror", default=None, help="also copy the results table here")
+    args = ap.parse_args()
+
     df = score_everything()
+    for col in ["positive", "error", *METRICS]:          # absent if nothing produced them
+        if col not in df:
+            df[col] = np.nan
     out = config.RESULTS / "rwa_scores.csv"
     df.to_csv(out, index=False)
-    print(f"\nsaved {len(df)} rows -> {out}\n")
+    print(f"\nsaved {len(df)} rows -> {out}")
+    if args.mirror:
+        try:
+            Path(args.mirror).mkdir(parents=True, exist_ok=True)
+            shutil.copy2(out, Path(args.mirror) / out.name)
+            print(f"copied -> {args.mirror}")
+        except OSError as e:
+            print(f"(could not copy to {args.mirror}: {e})")
+    print()
     base = df[(df.excluded == "") & (df.rem_minutes >= MIN_REM_MIN)]
 
     # 1. RBD separation within CAP ────────────────────────────────────────────
