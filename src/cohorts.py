@@ -10,6 +10,16 @@ Every cohort here is downloadable with no application and no credential:
   hmc     Haaglanden Medisch Centrum sleep staging database (PhysioNet,
           CC BY 4.0). 151 clinical PSGs. The Netherlands, 50 Hz.
 
+External cohorts (paper/preregistration_external.md):
+
+  boas    Bitbrain Open Access Sleep dataset (OpenNeuro ds005555, CC0). 128
+          nights of 100 adults from the general population, Micromed SD plus,
+          chin EMG at 256 Hz, no ECG. Spain, 50 Hz.
+  dodh    Dreem Open Dataset, healthy (Zenodo 15900394, MIT). 25 healthy
+          volunteers, Compumedics Siesta, 250 Hz. France, 50 Hz.
+  dodo    Dreem Open Dataset, obstructive sleep apnoea (same). 55 patients,
+          Somnomedics Somno HD, 250 Hz. Stanford, USA, 60 Hz.
+
 A cohort adapter knows how to list records, fetch one record's files into
 scratch, and read from them: chin EMG, ECG, leg EMG (if any), the hypnogram in
 30 s epochs from the start of the signal, per-epoch event flags and any
@@ -271,6 +281,195 @@ class Chal18Noisy(Chal18):
         return d
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXTERNAL COHORTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+class BOAS:
+    """
+    Bitbrain Open Access Sleep dataset (OpenNeuro ds005555, CC0): adults from
+    the general population, one or more nights each (participants.tsv 'pid'),
+    Micromed SD plus PSG, bipolar chin EMG at 256 Hz, consensus AASM stages of
+    three scorers in the events file (0 W, 1 N1, 2 N2, 3 N3, 4 REM; 8 and -2 =
+    disconnection / artefact). There is no ECG channel: heartbeats are found
+    on the chin EMG itself (see `_beats`).
+    """
+    name, mains = "boas", 50.0
+    BASE = "https://s3.amazonaws.com/openneuro.org/ds005555/"
+
+    def _participants(self):
+        txt = urllib.request.urlopen(self.BASE + "participants.tsv", timeout=60).read().decode()
+        return list(csv.DictReader(io.StringIO(txt), delimiter="\t"))
+
+    def records(self):
+        return [r["participant_id"] for r in self._participants()]
+
+    def demographics(self):
+        num = lambda v: float(v) if v not in (None, "", "n/a") else None
+        return {r["participant_id"]: {"age": num(r.get("age")), "sex": r.get("sex"),
+                                      "pid": r.get("pid")} for r in self._participants()}
+
+    def fetch(self, rec, scratch):
+        from .fetch import download
+        stem = f"{rec}/eeg/{rec}_task-Sleep_acq-psg"
+        return {"edf": download(self.BASE + stem + "_eeg.edf", Path(scratch) / f"{rec}.edf"),
+                "tsv": download(self.BASE + stem + "_events.tsv", Path(scratch) / f"{rec}.tsv")}
+
+    def read(self, rec, files):
+        from .edf import read_header, read_channel
+        hdr = read_header(files["edf"])
+        chin_ch = next(c for c in hdr.channels if c.label.upper().endswith("EMG"))
+        chin, fs, unit_known = read_channel(hdr, chin_ch)
+        eeg_ch = next((c for c in hdr.channels if c.label.upper().endswith(("C4", "C3"))), None)
+        eeg, fs_g = read_channel(hdr, eeg_ch)[:2] if eeg_ch else (None, None)
+        n_ep = int(len(chin) / fs // EPOCH_SEC)
+        hyp = np.full(n_ep, -1, np.int8)
+        with open(files["tsv"], encoding="utf-8") as f:
+            for r in csv.DictReader(f, delimiter="\t"):
+                e, code = int(round(float(r["onset"]) / EPOCH_SEC)), int(float(r["stage_hum"]))
+                if 0 <= e < n_ep and code in (0, 1, 2, 3, 4):
+                    hyp[e] = code
+        return dict(chin=chin, fs=fs, unit_known=unit_known, chin_label=chin_ch.label,
+                    ecg=None, fs_ecg=None, beats_from_chin=True, legs=[], hypnogram=hyp,
+                    flags={}, extra={}, eeg=eeg, fs_eeg=fs_g,
+                    eeg_label=eeg_ch.label if eeg_ch else None)
+
+
+class _RangeReader:
+    """Byte ranges of one URL, with retries (Zenodo serves ~1.6 MB/s per connection,
+    so large members are fetched as many ranges in parallel)."""
+    def __init__(self, url):
+        self.url = url
+
+    def get(self, a, b, tries=8):
+        import time
+        for i in range(tries):
+            try:
+                req = urllib.request.Request(self.url, headers={"Range": f"bytes={a}-{b - 1}"})
+                data = urllib.request.urlopen(req, timeout=300).read()
+                if len(data) == b - a:
+                    return data
+            except Exception:
+                pass
+            time.sleep(min(60, 3 * 2 ** i))
+        raise IOError(f"range {a}-{b} of {self.url} failed")
+
+
+class _RangeFile(io.RawIOBase):
+    """A seekable file over HTTP ranges - enough for zipfile to read a central directory."""
+    def __init__(self, url, block=1 << 16):
+        self.r, self.pos, self.block = _RangeReader(url), 0, block
+        head = urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60)
+        self.size = int(head.headers["Content-Length"])
+        self.c0, self.c = -1, b""
+
+    def seekable(self):
+        return True
+
+    def readable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def seek(self, off, whence=0):
+        self.pos = off if whence == 0 else (self.pos + off if whence == 1 else self.size + off)
+        return self.pos
+
+    def read(self, n=-1):
+        n = self.size - self.pos if n is None or n < 0 else min(n, self.size - self.pos)
+        if n <= 0:
+            return b""
+        a, b = self.pos, self.pos + n
+        if not (self.c0 <= a and b <= self.c0 + len(self.c)):
+            self.c0 = a
+            self.c = self.r.get(a, min(self.size, a + max(n, self.block)))
+        self.pos = b
+        return self.c[a - self.c0: b - self.c0]
+
+
+class DOD:
+    """
+    Dreem Open Datasets (Zenodo 15900394, MIT licence): one h5 file per night
+    inside a zip per dataset, with signals/eeg/*, signals/emg/* and ECG in uV at
+    250 Hz and a consensus hypnogram of five scorers (-1 not scored, 0 W, 1 N1,
+    2 N2, 3 N3, 4 REM). A record's member is fetched with parallel byte-range
+    requests and inflated locally.
+    """
+    URL = "https://zenodo.org/records/15900394/files/{}.zip?download=1"
+    UNSCORED = {"5d8e93a5-d26a-436d-bc2c-e9527dc92cbf"}   # no consensus (release notes)
+    FS = 250.0
+
+    def __init__(self, name, mains, threads=8, chunk=32 << 20):
+        self.name, self.mains, self.threads, self.chunk = name, mains, threads, chunk
+        self._members = None
+
+    def members(self):
+        if self._members is None:
+            import zipfile
+            z = zipfile.ZipFile(_RangeFile(self.URL.format(self.name)))
+            self._members = {Path(i.filename).stem: i for i in z.infolist()
+                             if i.filename.endswith(".h5") and "__MACOSX" not in i.filename
+                             and i.file_size > 1e6}
+        return self._members
+
+    def records(self):
+        return sorted(r for r in self.members() if r not in self.UNSCORED)
+
+    def demographics(self):
+        return {}
+
+    def fetch(self, rec, scratch):
+        import struct
+        import zlib
+        from concurrent.futures import ThreadPoolExecutor
+        info = self.members()[rec]
+        rr = _RangeReader(self.URL.format(self.name))
+        head = rr.get(info.header_offset, info.header_offset + 30)
+        n, m = struct.unpack("<HH", head[26:30])
+        start = info.header_offset + 30 + n + m
+        parts = [(a, min(a + self.chunk, start + info.compress_size))
+                 for a in range(start, start + info.compress_size, self.chunk)]
+        out = Path(scratch) / f"{rec}.h5"
+        inflate = zlib.decompressobj(-15) if info.compress_type == 8 else None
+        with ThreadPoolExecutor(self.threads) as ex, open(out, "wb") as f:
+            for i in range(0, len(parts), self.threads):          # in order, bounded memory
+                for data in ex.map(lambda p: rr.get(*p), parts[i: i + self.threads]):
+                    f.write(inflate.decompress(data) if inflate else data)
+            if inflate:
+                f.write(inflate.flush())
+        if out.stat().st_size != info.file_size:
+            raise IOError(f"{rec}: inflated {out.stat().st_size} of {info.file_size} bytes")
+        return {"h5": out}
+
+    def read(self, rec, files):
+        import h5py
+        is_ecg = lambda k: "ECG" in k.upper() or "EKG" in k.upper()
+        with h5py.File(files["h5"], "r") as h:
+            sig = h["signals"]
+            keys = [k for k in sig["emg"].keys() if not is_ecg(k)]
+            emg_name = next((k for k in keys if any(t in k.upper() for t in
+                                                    ("CHIN", "EMG", "MENT", "SUBM"))), keys[0])
+            chin = np.asarray(sig["emg"][emg_name][:], dtype=np.float64)
+            ecg = None
+            for group in sig.values():
+                if isinstance(group, h5py.Group):
+                    for k in group.keys():
+                        if is_ecg(k):
+                            ecg = np.asarray(group[k][:], dtype=np.float64)
+            eeg_name = next((k for k in ("C3_M2", "C4_M1") if k in sig["eeg"]), None)
+            eeg = np.asarray(sig["eeg"][eeg_name][:], dtype=np.float64) if eeg_name else None
+            stages = np.asarray(h["hypnogram"][:])
+        n_ep = int(len(chin) / self.FS // EPOCH_SEC)
+        hyp = np.full(n_ep, -1, np.int8)
+        k = min(n_ep, len(stages))
+        hyp[:k] = np.where(np.isin(stages[:k], (0, 1, 2, 3, 4)), stages[:k], -1)
+        return dict(chin=chin, fs=self.FS, unit_known=True, chin_label=f"emg/{emg_name}",
+                    ecg=ecg, fs_ecg=self.FS if ecg is not None else None, legs=[],
+                    hypnogram=hyp, flags={}, extra={}, eeg=eeg, fs_eeg=self.FS,
+                    eeg_label=eeg_name)
+
+
 # 0.39 = median quiet-REM level MGH / HMC (0.59 / 1.52 uV). 1.5 uV of white noise
 # at 200 Hz leaves ~1.4 uV in the 10-95 Hz band: sqrt(0.59^2 + 1.4^2) ~ 1.52 uV.
 COHORTS = {"chal18": Chal18(), "hmc": HMC(),
@@ -279,7 +478,8 @@ COHORTS = {"chal18": Chal18(), "hmc": HMC(),
            "hmc_low": HMCDegraded("hmc_low", gain=0.39),
            "hmc_low_mgh": HMCDegraded("hmc_low_mgh", fs_out=200, lsb_uv=1.0, gain=0.39),
            "chal18_noise": Chal18Noisy("chal18_noise", noise_uv=1.5),
-           "cap": CAP()}
+           "cap": CAP(),
+           "boas": BOAS(), "dodh": DOD("dodh", mains=50.0), "dodo": DOD("dodo", mains=60.0)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -287,11 +487,17 @@ COHORTS = {"chal18": Chal18(), "hmc": HMC(),
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _beats(d):
-    """R-peak times (s) from the record's ECG, or none if they do not look real."""
-    if d.get("ecg") is None:
+    """R-peak times (s) from the record's ECG, or none if they do not look real.
+    Records without ECG may ask for the chin EMG itself to be searched for the
+    heartbeat it carries (same detector, same plausibility test)."""
+    if d.get("ecg") is not None:
+        sig, fs = d["ecg"], d["fs_ecg"]
+    elif d.get("beats_from_chin"):
+        sig, fs = d["chin"], d["fs"]
+    else:
         return np.empty(0)
-    beats = r_peaks(d["ecg"], d["fs_ecg"])
-    return beats if plausible(beats, len(d["ecg"]) / d["fs_ecg"]) else np.empty(0)
+    beats = r_peaks(sig, fs)
+    return beats if plausible(beats, len(sig) / fs) else np.empty(0)
 
 
 def extract_pack(cohort, rec, d, demo=None):

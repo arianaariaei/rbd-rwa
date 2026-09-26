@@ -82,6 +82,7 @@ def scale(pack):
     out = {"rem_p50": float(np.median(r)), "rem_p95": float(np.percentile(r, 95))}
     if len(nrem) >= 60:
         out["nrem_p50"] = float(np.median(nrem))
+        out["nrem_p5"] = float(np.percentile(nrem, 5))
     n2 = (b / NOISE_P5_RATIO) ** 2
     out.update({f"{k}_net": float(np.sqrt(max(v * v - n2, 0.0))) for k, v in list(out.items())})
     return dict(out, level_1s=b)
@@ -96,9 +97,11 @@ def score_rows(pack, band, info):
 
 
 def _info(m, cohort):
+    ecg = m.get("ecg") or m.get("chin_info", {}).get("ecg") or {}
     return dict(cohort=cohort, record=m["record"], group=group_of(cohort, m["record"]),
                 chin_fs=m.get("chin_fs", m.get("chin_info", {}).get("fs")),
-                unit_known=m.get("unit_known", True), age=m.get("age"))
+                unit_known=m.get("unit_known", True), age=m.get("age"), pid=m.get("pid"),
+                beats=int(ecg.get("beats") or 0))
 
 
 def score_pack_file(path):

@@ -21,7 +21,7 @@ DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
 FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/pack.py", "src/cohorts.py", "src/rwa.py",
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
-         "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py"]
+         "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py", "run_external.py"]
 
 
 def md(text):
@@ -126,6 +126,19 @@ every night as recorded and on the noise ladder, against the criteria fixed in a
 (paper/preregistration_floor_corrected.md). About 15 minutes.
 """),
         code(f"!cd {CODE_DIR} && python run_floor.py"),
+        md("""
+## 5c. External cohorts
+
+Three recording systems not used to find the effect: BOAS (OpenNeuro, 128 nights of adults
+from the general population), DOD-O (55 patients, Stanford) and DOD-H (25 healthy
+volunteers, France), scored against the predictions fixed in advance
+(paper/preregistration_external.md). BOAS takes ~15 minutes; the Dreem sets come from
+Zenodo at a few MB/s and take about an hour each.
+"""),
+        code(f"!cd {CODE_DIR} && python run_cohort.py --cohort boas --workers 3 {{PACK_MIRROR}} "
+             f"&& python run_cohort.py --cohort dodo --workers 3 {{PACK_MIRROR}} "
+             f"&& python run_cohort.py --cohort dodh --workers 3 {{PACK_MIRROR}} "
+             f"&& python run_external.py"),
         md("## 6. Score every night with every method"),
         code(f"!cd {CODE_DIR} && python run_score.py {{RESULT_MIRROR}}"),
         md("## 7. Background definition sensitivity, then the report tables"),
