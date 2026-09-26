@@ -11,6 +11,7 @@ fixed in paper/preregistration_external.md:
   X4  floor against share flagged across all groups without RBD (E4)
   X5  DOD-O against MGH's noise ladder (E6)
   X6  BOAS: every night, and by age (descriptive)
+  X7  heartbeat check (exploratory, not pre-specified)
 
 BOAS has several nights for some participants; its primary rows are each
 participant's first recording. CAP RBD and CAP patients are the nights on
@@ -60,12 +61,58 @@ def label(df):
     return df
 
 
+def periodicity(pack, band):
+    """How strongly the REM envelope repeats at a heart rate: the largest spectral peak of
+    the envelope between 0.7 and 2 Hz over the median in 0.5-3 Hz (Welch, 20-s windows,
+    REM stretches of at least a minute); higher = more heartbeat in the EMG."""
+    from scipy.signal import welch
+    from src.rwa import _segments, _select
+    ep, env, _, _ = _select(pack, band)
+    if env is None or len(ep) < 2:
+        return np.nan
+    fs = pack["meta"]["env_fs"]
+    acc, n = None, 0
+    for a, b in _segments(ep):
+        x = env[a:b].reshape(-1).astype(float)
+        if len(x) >= fs * 60:
+            f, p = welch(x - x.mean(), fs=fs, nperseg=int(fs * 20))
+            acc, n = (p if acc is None else acc + p), n + 1
+    if not n:
+        return np.nan
+    band_, hr = (f >= 0.5) & (f <= 3.0), (f >= 0.7) & (f <= 2.0)
+    return float(acc[hr].max() / np.median(acc[band_]))
+
+
+def heartbeat_check(path):
+    """Exploratory (not pre-specified): the heartbeat periodicity of the REM envelope with
+    and without heartbeat removal, and the calls with the heartbeat left in."""
+    from src.pack import load_pack
+    from src.rwa import METHODS, floor_corrected, score_night
+    pack = load_pack(path)
+    m = pack["meta"]
+    out = {"cohort": m.get("cohort", path.parent.name), "record": m["record"],
+           "period_native": periodicity(pack, "native"),
+           "period_with_ecg": periodicity(pack, "native_with_ecg")}
+    for key in ("montreal", "sinbar"):
+        for tag, meth in (("pub", METHODS[key]), ("fc", floor_corrected(METHODS[key], 1.0))):
+            r = score_night(pack, meth, "native_with_ecg")
+            out[f"{key}_{tag}_with_ecg"] = float(bool(r.get("positive"))) if r.get("positive") is not None else np.nan
+    return [out]
+
+
 def main():
     packs = [p for c in COHORTS for p in sorted((config.DURABLE / "packs" / c).glob("*.npz"))
              if ".tmp" not in p.name]
     print(f"scoring {len(packs)} packs", flush=True)
     df = label(score(packs, score_pack_file))
+    from src.fetch import cap_demographics
+    demo = cap_demographics()
+    if demo:
+        c = df.cohort == "cap"
+        df.loc[c, "age"] = df.loc[c, "record"].map(lambda r: demo.get(r, {}).get("age"))
     df.to_csv(config.RESULTS / "external_scores.csv", index=False)
+    hb = score([p for p in packs if p.parent.name in ("chal18", "hmc", "boas", "dodo", "dodh")],
+               heartbeat_check)
     all_nights = df[(df.rem_minutes >= MIN_REM) & (df.who != "")]
     d = all_nights[all_nights.primary]
 
@@ -200,6 +247,35 @@ def main():
             n = g.record.nunique()
             say(f"  {name:<22} n={n:<4} " + "  ".join(cells))
         say()
+
+    # X7 ─────────────────────────────────────────────────────────────────────
+    say("X7  Heartbeat check (exploratory, not pre-specified): periodicity of the REM envelope")
+    say("    at a heart rate (higher = more heartbeat), and the share flagged with it left in")
+    h = hb.merge(d[(d.method == "Montreal") & (d.variant == "published")][["cohort", "record", "who"]],
+                 on=["cohort", "record"])
+    for w in ("MGH", "HMC", "DOD-O", "DOD-H", "BOAS"):
+        g = h[h.who == w]
+        if g.empty:
+            continue
+        cells = []
+        for meth in ("Montreal", "SINBAR"):
+            for variant, tag in (("published", "pub"), ("FC", "fc")):
+                removed = sel(d[d.who == w], meth, variant).set_index("record").y
+                left = g.set_index("record")[f"{meth.lower()}_{tag}_with_ecg"].reindex(removed.index)
+                cells.append(f"{meth} {variant} {100 * removed.mean():.0f} -> {100 * left.mean():.0f}")
+        say(f"  {w:<6} n={len(g):<4} periodicity after removal {g.period_native.median():.2f} "
+            f"[p90 {g.period_native.quantile(.9):.2f}], left in {g.period_with_ecg.median():.2f}")
+        say("         % flagged, removed -> left in: " + "   ".join(cells))
+    ref = h[h.who == "MGH"].period_native.quantile(0.9)
+    b = h[h.who == "BOAS"]
+    if len(b):
+        clean = set(b[b.period_native <= ref].record)
+        say(f"  BOAS nights no more periodic than MGH's after removal (<= {ref:.2f}, MGH p90): "
+            f"{len(clean)}/{len(b)}; % flagged among them:")
+        say("    " + "   ".join(
+            f"{meth} {variant} {100 * sel(d[(d.who == 'BOAS') & d.record.isin(clean)], meth, variant).y.mean():.0f}"
+            for meth in ("Montreal", "SINBAR") for variant in ("published", "FC")))
+    say()
 
     say("Pre-specified predictions: " + "  ".join(
         f"{k}: {'met' if v else 'not met'}" for k, v in sorted(verdict.items())))
