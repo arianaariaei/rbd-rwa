@@ -1,5 +1,7 @@
 # Follow-up analyses (2026-09-26)
 
+Floor-corrected criteria, age and per-site PPV: see `results_floor_2026-09-26.md`.
+
 Same packs and scoring as `results_2026-09-26.md`; nights with >= 10 min REM, native band,
 all REM epochs unless stated. MGH = PhysioNet Challenge 2018 (n=919-925 scored nights),
 HMC = Haaglanden Medisch Centrum (n=147).

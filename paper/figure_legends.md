@@ -61,3 +61,13 @@ to 57%). (B) Cut-offs re-derived on harmonised CAP data (Youden's index, RBD vs 
 patients) and applied to harmonised MGH and HMC: share of external nights flagged, with 95%
 intervals from 2,000 bootstrap re-derivations, and leave-one-out sensitivity on CAP. The
 low re-derived thresholds reopen the difference between the hospitals.
+
+**Figure 8. Floor-corrected criteria.** (A, B) Share of nights flagged by the published
+criteria (dotted) and the floor-corrected criteria (solid; reference background 1.0 uV) as
+white noise is added to the same nights (noise ladder), plotted against the median quiet-REM
+level: CAP RBD (red, n = 21), CAP patients on the same system (grey, n = 51), MGH (blue,
+n = 280) and HMC (purple, n = 147). Floor-corrected verdicts do not change until the floor
+exceeds about 2 uV, where small activity can no longer be told from noise. (C) As recorded:
+share flagged by the published (plain) and floor-corrected (hatched) Montreal and SINBAR
+criteria. The floor-corrected criteria close the MGH-HMC gap (Montreal +20.5 to +1.6
+points; SINBAR +51.0 to +2.4).

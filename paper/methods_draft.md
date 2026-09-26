@@ -25,6 +25,14 @@ reported separately. HMC and MGH provide large clinical reference populations in
 RBD is not labelled; given its prevalence in sleep-clinic populations, nearly all
 positive calls in these cohorts are expected to be false positives.
 
+This is a retrospective analysis of pre-existing open databases. CAP does not state the
+criteria by which RBD was diagnosed; because a clinical diagnosis of RBD itself requires
+polysomnographic evidence of RWA, and CAP's patients had established disease, sensitivity
+estimates are subject to incorporation and spectrum bias and are best read as upper bounds
+for a screening population. Ages and sexes of CAP subjects were taken from the database's
+spreadsheet (gender-age.xlsx); MGH provides age and sex per record; HMC publishes only group
+summaries.
+
 ## 2.2 Signal processing
 
 Recordings were streamed from PhysioNet's open-data mirror, processed in the cloud and
@@ -153,7 +161,48 @@ recording's own noise, the two are indistinguishable (ratio near 1).
 of REM periods, all nights were re-scored without the first and last epoch of every REM
 period.
 
-## 2.7 Reproducibility
+*Age.* CAP reports each subject's age in a separate spreadsheet. Because the RBD patients
+were older (71 +/- 6 years) than most same-system patients (mostly NFLE, 30 +/- 11 years),
+discrimination and false-positive rates were recomputed against same-system patients aged
+50 or over.
+
+## 2.7 Floor-corrected criteria (pre-specified)
+
+A relative rule counts activity above k times the background b. When b is set by noise,
+this requires muscle activity of about sqrt(k^2 - 1) b (in RMS terms), so the muscle activity
+a criterion asks for scales with the noise floor of the recording system. We therefore
+tested a floor-corrected (FC) version of each rule, in which activity counts above
+
+T = max( sqrt(n^2 + (k^2 - 1) B^2), g b ),  with n = b / 0.91,
+
+where b is the night's background as before, n the noise RMS that b implies (for
+band-limited white noise the 5th percentile of 1-s RMS values is 0.91 of the RMS, in
+simulation at 200, 256 and 512 Hz), B a reference background and g = 1.5 a guard against
+counting noise (on simulated white noise, 0.1-s runs above 1.5 b occurred in 0.4-0.7% of
+3-s mini-epochs and never made an epoch tonic). The muscle activity required is thus fixed at
+what the published rule requires on a system whose background is B; at b = B the FC rule is
+within 3% of the published one, below B it becomes an absolute threshold, and above B the
+noise is subtracted in power instead of multiplied. Epoch and mini-epoch lengths, burst
+durations, the 10-uV tonic alternative and the published percentage cut-offs were
+unchanged; FC rules were applied only to recordings in physical units. B = 1.0 uV was fixed
+in advance as the primary reference (between the quiet systems' 0.5-0.9 uV and HMC's
+1.5 uV); 0.5, 0.75, 1.25, 1.5 and 2.0 uV, and a "clamp" variant without subtraction
+(threshold k max(b, B)), were secondary. The rule, its parameters and five decision
+criteria - invariance of MGH positivity and of RBD sensitivity along the noise ladder, MGH-HMC
+agreement as recorded, RBD sensitivity of at least 85%, and no increase in CAP patients'
+positivity - were committed to the repository with the analysis code before any FC result
+for MGH, HMC or the CAP patients existed (Supplement S2). Cut-offs were also re-derived under
+FC (Youden's index on CAP, leave-one-out and bootstrap, as in Section 2.5) and called
+portable if MGH and HMC positivity differed by at most 5 points with leave-one-out
+sensitivity of at least 80%.
+
+*Scale of muscle activity.* Because FC thresholds are in microvolts, they assume that sites
+record muscle activity on a comparable scale. For every night we computed the median of
+1-s RMS in N2/N3 and the median and 95th percentile in REM, each with the noise power
+(b / 0.91)^2 subtracted, and compared the medians between cohorts; a ratio within 0.67-1.5
+was fixed in advance as comparable.
+
+## 2.8 Reproducibility
 
 All code (Python; NumPy, SciPy, pandas, wfdb) is openly available and runs end-to-end
 from a single Google Colab notebook that downloads the public data, so every number in

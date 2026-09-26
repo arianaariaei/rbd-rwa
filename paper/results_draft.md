@@ -129,7 +129,10 @@ percentile of REM) and collapsed towards chance as the reference approached the 
 Taking sensitivity from CAP RBD and specificity from the pooled external cohorts, the
 positive predictive value at an RBD prevalence of 2% would be 7% for the Montreal
 criteria, 3% for SINBAR and 11% for the RAI; even at 10% prevalence it would be 28%, 13%
-and 41% (T6).
+and 41% (T6). The same criteria gave different values at each hospital: at 2% prevalence,
+6% (MGH) against 17% (HMC) for the Montreal criteria and 2% against 7% for SINBAR, while
+the RAI gave 11% and 13%. Because CAP's patients have established RBD, these values are
+upper bounds for a screening population.
 
 ## 3.10 Cut-offs re-derived for automated scoring, with and without harmonisation
 
@@ -149,3 +152,54 @@ Re-deriving cut-offs on the harmonised CAP data to recover it drove them very lo
 phasic 5.4%, tonic 1.5%, SINBAR "any" 13.7%), with leave-one-out sensitivity of 71-90% and
 reopened site gaps: MGH 21% vs HMC 10% (Montreal phasic), 40% vs 19% (Montreal tonic) and
 30% vs 20% (SINBAR "any"), with wide bootstrap intervals.
+
+## 3.11 Subtracting the noise floor makes the criteria portable
+
+With the noise removed, the three recording systems registered muscle activity at the same
+size: the median N2/N3 level was 1.60 uV in MGH, 1.70 uV in HMC and 1.61 uV in CAP's
+patients, and the median REM level 0.44, 0.45 and 0.39 uV, although their quiet-REM levels
+differed 2.6-fold (0.59, 1.52 and 0.48 uV). The sites differed in noise, not in gain.
+
+The pre-specified floor-corrected (FC) rules (Methods 2.7; B = 1.0 uV) removed the
+dependence on noise (Fig. 8A-B). On the same 280 MGH nights, raising the floor to HMC's
+1.5 uV lowered positivity under the published Montreal criteria from 33.9% to 11.9% (61
+nights changed) but left Montreal-FC at 21.3% (no night changed); SINBAR fell from 83.0% to
+33.2% (138 nights), SINBAR-FC moved from 48.7% to 50.5% (5 nights, all towards positive). In
+CAP's RBD patients, Montreal sensitivity fell from 90% to 57% with the published rule and
+stayed at 81% with FC; SINBAR-FC stayed at 95%. Both FC rules were flat up to a floor of
+about 2 uV; beyond it the guard against counting noise takes over and positivity falls,
+because small activity can no longer be told apart from noise.
+
+As recorded, FC closed the site gap (Fig. 8C). Montreal-FC flagged 18% [16-21] of MGH and
+16% [11-23] of HMC patients (difference +1.6 points, against +20.5 with the published rule),
+and SINBAR-FC 45% [42-48] and 43% [35-51] (+2.4, against +51.0). Subtraction mattered: a
+clamp that only kept the background from falling below 1.0 uV left gaps of +7.5 and +15.2
+points and still lost sensitivity with noise. Against the five criteria fixed in advance,
+SINBAR-FC met all five (sensitivity 95%; CAP patients 45% against 75% published).
+Montreal-FC met four; its sensitivity, 81% (17 of 21), was below the pre-specified 85%
+(published rule on the same nights: 90%). The reference background B set the operating
+point without affecting portability: from B = 1.0 to 2.0 uV both FC rules stayed within
+2 points along the ladder and within 6 points between sites, while sensitivity and
+false-positive rates fell together (Montreal-FC: sensitivity 81% to 57%, MGH 18% to 8%).
+With B = 0.75 uV, Montreal-FC kept 95% sensitivity with a 4.5-point gap (exploratory).
+
+FC does not make the published SINBAR chin cut-off specific: at 18.2% it flagged about 45%
+of patients at both hospitals. Re-derived on CAP, however, the SINBAR-FC cut-off (49.1% of
+3-s mini-epochs) transferred: it flagged 13% [10-17] of MGH and 14% [11-20] of HMC patients
+with 86% leave-one-out sensitivity, whereas the cut-off re-derived on the published SINBAR
+measure flagged 10% and 1%. Re-derived Montreal-FC cut-offs fell below 8% and did not
+transfer (gaps +10 and +12 points). Within CAP, where RBD patients and controls share one
+system, FC changed discrimination little (AUC 0.83-0.85 against 0.84-0.85). Like the RAI, FC
+depends on gain: scaling HMC by 0.39 lowered SINBAR-FC positivity from 43% to 12% - a
+change real sites did not show, since their net muscle levels agreed.
+
+## 3.12 Age
+
+CAP's RBD patients were 71 +/- 7 years old; the same-system patients were mostly younger
+(35 under 50, mean 30, mostly NFLE; 16 aged 50 or over, mean 59: PLM, insomnia, NFLE).
+Discrimination held against patients of similar age (AUC against patients >= 50: Montreal
+tonic 0.87, phasic 0.81, SINBAR any 0.88, RAI 0.81; against all patients 0.84-0.85), but
+older patients without RBD were flagged more often: 44% against 29% by the Montreal criteria,
+19% against 11% by the RAI, and 62% against 37% by SINBAR-FC (T17, FC9). False-positive
+rates estimated from CAP's young controls are therefore optimistic; the external clinical
+cohorts (mean age 55 in MGH) are the better guide.

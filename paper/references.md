@@ -66,3 +66,37 @@
     Circulation. 2000;101(23):e215-e220. (standard citation; confirm)
 23. Bossuyt PM, Reitsma JB, Bruns DE, et al. STARD 2015: an updated list of essential items
     for reporting diagnostic accuracy studies. BMJ. 2015;351:h5527. (confirm)
+
+Added 2026-09-26 (second round; metadata from Europe PMC):
+
+24. Mihashi I, Takei Y, Kawana F, et al. REM sleep without atonia thresholds are associated
+    with reduced cardiac MIBG uptake but not with DAT-SPECT binding in probable REM sleep
+    behavior disorder. Sleep Med. 2026;147:109132. doi:10.1016/j.sleep.2026.109132
+    (multicentre, 91 Japanese patients; SINBAR threshold >= 11.3% "substantially lower than
+    the Western standard of 27.2%"; confirm title ending)
+25. Leclair-Visonneau L, Feemster JC, Bibi N, et al. Contemporary diagnostic visual and
+    automated polysomnographic REM sleep without atonia thresholds in isolated REM sleep
+    behavior disorder. J Clin Sleep Med. 2024;20(2):279-291. doi:10.5664/jcsm.10862
+    (20 iRBD, 20 controls; visual and automated cut-offs differ)
+26. Lim MM, Neilson LE, Elliott JE, et al. The North American Prodromal Synucleinopathy
+    study: protocol for a multi-site, longitudinal, observational study of idiopathic/isolated
+    rapid eye movement sleep behavior disorder. Sleep Adv. 2026;7(1):zpag007.
+    doi:10.1093/sleepadvances/zpag007 (9 centres, centralised PSG analysis)
+27. Ferri R, Puligheddu M, Figorilli M, et al. Protocol for the DREAMER study: design and
+    methodological framework of a multicenter trial-ready cohort of individuals with
+    isolated REM sleep without atonia. PLoS One. 2026;21(6):e0350467.
+    doi:10.1371/journal.pone.0350467 (4 Italian centres; RAI < 0.85)
+28. Papakonstantinou A, Klemming J, Haberecht M, et al. Ikelos-RWA. Validation of an
+    automatic tool to quantify REM sleep without atonia. Clin EEG Neurosci.
+    2024;55(6):657-664. doi:10.1177/15500594231175320
+29. Possti D, Oz S, Gerston A, et al. Semi automatic quantification of REM sleep without
+    atonia in natural sleep environment. NPJ Digit Med. 2024;7(1):341.
+    doi:10.1038/s41746-024-01354-8
+30. Modarres MH, Elliott JE, Weymann KB, et al. Validation of visually identified muscle
+    potentials during human sleep using high frequency/low frequency spectral power ratios.
+    Sensors (Basel). 2021;22(1):55. doi:10.3390/s22010055 (a spectral, noise-robust
+    alternative to amplitude thresholds)
+
+Search for prior work on the noise floor (Europe PMC, 2026-09-26: "REM sleep without
+atonia" with noise / background EMG / automated / multicentre / equipment): no study found
+that relates background-relative RWA thresholds to the recording system's noise floor.

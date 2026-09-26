@@ -17,7 +17,10 @@ matched HMC's lowered MGH's positivity to HMC's, every change in the same direct
 a pre-specified dose-response, MGH's curve passed through HMC's own point; and HMC's
 system was noisier on an EEG channel as well. The same mechanism works against
 sensitivity: at an HMC-like noise floor, the Montreal criteria missed about four in ten of
-the RBD patients they caught on CAP's quieter system.
+the RBD patients they caught on CAP's quieter system. Once the noise was subtracted, the
+three systems recorded muscle activity at the same size, and floor-corrected versions of
+the criteria, specified in advance, no longer depended on the noise floor and gave the same
+answer at both hospitals.
 
 ## Why the same criteria give different answers at different sites
 
@@ -87,23 +90,64 @@ together.
 
 ## What to do about it
 
-We tested one obvious remedy and it failed our pre-specified criterion. Harmonising every
-recording to a common, higher noise floor made MGH and HMC agree under the published
-cut-offs, but only by discarding sensitivity (Montreal 90% to 57%); re-deriving cut-offs on
-the harmonised data to recover it pushed them so low (1.5-14%) that the two hospitals
-diverged again. Re-deriving cut-offs without harmonisation reduced external false
-positives substantially, but those cut-offs rest on 21 patients from one centre and were
-imprecise. None of these is a portable threshold.
+We tested two remedies, each with criteria fixed in advance. Harmonising every recording to
+a common, higher noise floor made MGH and HMC agree under the published cut-offs, but only
+by discarding sensitivity (Montreal 90% to 57%); re-deriving cut-offs on the harmonised data
+to recover it pushed them so low (1.5-14%) that the two hospitals diverged again. Adding
+noise throws information away; the second remedy removes noise instead.
 
-What the data do support is reporting. The chin EMG's quiet-REM level (in uV) and its floor
-signature can be computed from any recording in seconds, and should accompany every RWA
-measure and every proposed cut-off, so that thresholds can be compared, pooled or
-recalibrated across systems. Methods may also be designed to be less sensitive to the
-floor. The RAI, which subtracts a moving-minimum noise estimate, was the most stable across
-sites (MGH 9%, HMC 7%) and nearly immune to added noise, but depends on gain: scaling the
-signal to MGH's level halved its positive calls in HMC. The relative criteria have the
-opposite weakness. A measure that subtracts the noise floor before comparing activity with
-a relative reference would in principle be invariant to both, and is a natural next step.
+The floor-corrected rules ask, on every recording, for the muscle activity the published
+rule asks for on a system with a 1-uV background: the night's own noise is subtracted in
+power rather than multiplied. Nothing else about the criteria changes, and the correction
+needs nothing but the recording itself. It worked on both counts that matter. On the same
+nights, raising the noise floor to HMC's no longer changed the verdict (Montreal-FC: none of
+280 MGH nights changed; RBD sensitivity unchanged), and between hospitals the gap closed
+(Montreal +20.5 to +1.6 points; SINBAR +51.0 to +2.4). The correction is legitimate only
+if sites record muscle activity on the same scale, and they did: with the noise removed,
+MGH, HMC and CAP had the same N2/N3 and REM chin levels to within 10%. What differed between
+the hospitals was noise, and once it was subtracted the hospitals agreed.
+
+Two qualifications follow from the pre-specified criteria. First, Montreal-FC at the primary
+reference kept 81% sensitivity, below the 85% we had required; the reference background
+sets the operating point (B = 0.75 uV kept 95% sensitivity with a 4.5-point gap), so a lower
+reference may suit the Montreal criteria, but that choice was made after seeing the data and
+needs confirmation elsewhere. Second, correcting the floor does not make a cut-off specific.
+At the published chin cut-off of 18.2%, SINBAR-FC still flagged 45% of patients - now at
+both hospitals. A cut-off re-derived for automated SINBAR-FC scoring (49% of mini-epochs)
+flagged 13% and 14% of MGH and HMC patients with 86% leave-one-out sensitivity: the first
+threshold in this study that transferred between hospitals, although it rests on 21 RBD
+patients from one centre and should be validated before use.
+
+Why do visually derived cut-offs over-call when applied automatically, even after
+correction? Our automated values in patients without RBD were three to five times those of
+Frauscher's visually scored controls. A visual scorer reads chin EMG at a fixed display gain,
+at which twitches of one or two microvolts are barely visible; visual scoring therefore
+carries an implicit absolute detection limit that an automated relative rule lacks. The
+floor-corrected rule restores an explicit one. This explanation is a hypothesis; it could be
+tested by scoring the same nights visually at several display gains.
+
+Floor correction also explains why the choice of reference matters as it does. For a rule
+with multiplier k, noise-invariance on a system with background b requires
+sqrt((b/0.91)^2 + (k^2 - 1) B^2) >= 1.5 b, that is B >= 0.59 b for SINBAR's k = 2. At HMC's
+upper-quartile floor (1.8 uV) this means B >= 1.05 uV: a SINBAR-FC rule with a smaller
+reference cannot be read the same way on HMC's system, which is what we saw at B = 0.5 uV
+(site gap +25 points). The reference must be at least about 0.6 times the noisiest floor
+among the systems to be compared, and a system's floor therefore limits the smallest RWA it
+can detect in the same way as it does for any other measurement.
+
+The correction has limits of its own. Its constants were set on simulated white noise at
+200-512 Hz; on CAP's old 128-Hz system, where healthy volunteers had floors of 2.5-3.7 uV,
+it turned three of them positive that the published Montreal rule had not. Below the AASM
+minimum of 200 Hz, and above a floor of about 1.7 times the reference (1.7 uV for
+B = 1.0 uV), small activity cannot be separated from noise reliably, and floor-corrected
+scores should not be read. Real noise is also not perfectly white or stationary.
+
+What the data support in practice is a short calibration report with every RWA measure and
+every proposed cut-off: the chin EMG's quiet-REM level (its noise) and its net N2/N3 level
+(its gain), both computable from any recording in seconds, together with the floor-corrected
+reference used. The RAI, which subtracts a moving-minimum noise estimate, was also stable
+across sites (MGH 9%, HMC 7%) and nearly immune to added noise but, like any absolute
+measure, depends on gain.
 
 ## Clinical covariates
 
@@ -125,7 +169,15 @@ fixed before it was run. Our automated scoring reproduced published values in RB
 
 The limitations are substantial. The only open recordings of RBD are CAP's: 22 patients
 with clinical RBD from one Italian centre, so sensitivity estimates are imprecise and come
-from a single, quiet recording system. RBD status is unknown in MGH and HMC; at a prevalence
+from a single, quiet recording system. These patients had established RBD, whose diagnosis
+itself rests on polysomnographic RWA; sensitivity is therefore optimistic for the milder,
+prodromal cases a screening programme would seek, and the positive predictive values we
+report are upper bounds. They were also older (71 years) than most patients recorded on the
+same system (mostly epilepsy patients around 30 years), so discrimination within CAP is
+flattered by age; against same-system patients aged 50 or over, discrimination held
+(AUC 0.81-0.88) but patients without RBD were flagged more often (Montreal 44% against 29%).
+Scorers may leave the most active REM epochs of RBD patients unscored as REM, which would
+dilute RWA in exactly the nights that define sensitivity. RBD status is unknown in MGH and HMC; at a prevalence
 of about 1-2% [Haba-Rubio 2018] most, but not all, positive calls there are false. Only chin
 EMG was analysed; SINBAR's recommended montage adds the flexor digitorum superficialis, and
 the AASM rules consider limb muscles, which may improve specificity. Automated scoring does
@@ -142,9 +194,11 @@ Published RWA cut-offs do not transfer to automated scoring across recording sit
 same criteria flagged 9% of patients at one hospital and 29% at another. The difference is
 not explained by amplitude, storage format, sleep apnoea or age; it follows the noise floor
 of the recording, against which the relative criteria are, in effect, measured. The same
-mechanism makes noisier systems miss RBD. Before automated RWA quantification is used to
-find people with prodromal synucleinopathy in routine polysomnograms, every threshold should
-be reported together with the noise floor it was set on, and methods should be made robust
-to it.
+mechanism makes noisier systems miss RBD. Subtracting each recording's own noise floor, a
+correction that needs nothing but the recording, removed both effects in a pre-specified
+test. Before automated RWA quantification is used to find people with prodromal
+synucleinopathy in routine polysomnograms, or pooled across the centres of multi-site
+cohorts, thresholds should be defined against the noise floor rather than in multiples of
+it, and reported with the floor and reference on which they were set.
 
 <!-- References: see references.md (verified 2026-09-26). -->
