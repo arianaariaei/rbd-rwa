@@ -21,7 +21,7 @@ DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
 FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/pack.py", "src/cohorts.py", "src/rwa.py",
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
-         "run_report.py", "run_figures.py"]
+         "run_report.py", "run_figures.py", "run_ladder.py"]
 
 
 def md(text):
@@ -105,15 +105,28 @@ their quiet-REM level from ~0.6 uV to HMC's ~1.5 uV (`chal18_noise`, ~15 minutes
 """),
         code(f"!cd {CODE_DIR} && python run_cohort.py --cohort chal18_noise --limit 300 "
              f"--workers 3 {{PACK_MIRROR}}"),
-        md("## 5. Score every night with every method"),
+        md("""
+## 5. The noise ladder
+
+CAP, HMC and 300 MGH nights streamed once more; each night's chin EMG is kept as
+recorded and with white noise added at 0.5-3 uV, and at the level that brings its
+quiet-REM level to 1.5 and 2.0 uV. The analysis and its decision criteria were fixed
+in advance (paper/preregistration_noise_ladder.md). About 40 minutes; the ladder
+files stay on this machine (they are large) and only the results go to Drive.
+"""),
+        code(f"!cd {CODE_DIR} && python run_cohort.py --cohort cap --ladder --workers 3 "
+             f"&& python run_cohort.py --cohort hmc --ladder --workers 3 "
+             f"&& python run_cohort.py --cohort chal18 --ladder --limit 300 --workers 3 "
+             f"&& python run_ladder.py"),
+        md("## 6. Score every night with every method"),
         code(f"!cd {CODE_DIR} && python run_score.py {{RESULT_MIRROR}}"),
-        md("## 6. Background definition sensitivity, then the report tables"),
+        md("## 7. Background definition sensitivity, then the report tables"),
         code(f"""
 !cd {CODE_DIR} && python run_sensitivity.py && python run_report.py
 if MIRROR:
     !mkdir -p {{MIRROR}}/results && cp {WORK_DIR}/results/* {{MIRROR}}/results/
 """),
-        md("## 7. Figures"),
+        md("## 8. Figures"),
         code(f"""
 !cd {CODE_DIR} && python run_figures.py
 if MIRROR:

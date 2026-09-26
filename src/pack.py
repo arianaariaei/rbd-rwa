@@ -41,7 +41,8 @@ def build_pack(chin, legs, hypnogram, env_fs, epoch_sec, meta, epoch_flags=None)
     n_bins = min(len(v) for v in chin.values())
     n_ep = min(len(hypnogram), n_bins // per)
     hyp = np.asarray(hypnogram[:n_ep], dtype=np.int8)
-    rows = [r for r in ROWS if r in chin]
+    # the standard rows first, then any others (e.g. noise-ladder copies)
+    rows = [r for r in ROWS if r in chin] + [r for r in chin if r not in ROWS]
 
     rem_ep = np.flatnonzero(hyp == REM_CODE).astype(np.int32)
     idx = rem_ep[:, None] * per + np.arange(per)[None, :]

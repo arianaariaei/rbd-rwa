@@ -46,6 +46,59 @@ def _read_text(db, name):
     raise IOError(f"cannot fetch {db}/{name}")
 
 
+EEG_PREFERRED = ("C4-M1", "C3-M2", "C4-A1", "C3-A2", "C4A1", "C3A2")
+
+
+def _central_eeg(channels):
+    """A central EEG channel of an EDF (C4 or C3, against a mastoid if possible)."""
+    norm = lambda s: s.upper().replace(" ", "").replace("EEG", "")
+    for want in EEG_PREFERRED:
+        for c in channels:
+            if norm(c.label) == want:
+                return c
+    return next((c for c in channels if norm(c.label).startswith(("C4", "C3"))), None)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CAP (streamed like the other cohorts, for the noise ladder; the main CAP
+#  pipeline goes through run_extract.py and is repacked by run_cohort.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class CAP:
+    name, mains = "cap", 50.0
+
+    def records(self):
+        from .fetch import cap_records
+        return [r for group in cap_records().values() for r in group]
+
+    def demographics(self):
+        return {}
+
+    def fetch(self, rec, scratch):
+        from .fetch import fetch_cap
+        edf, txt = fetch_cap(rec, scratch)
+        return {"edf": edf, "txt": txt}
+
+    def read(self, rec, files):
+        from .cap import build_hypnogram
+        from .ecg import find_ecg
+        from .edf import read_header, read_channel
+        from .extract import find_emg, read_source
+        hdr = read_header(files["edf"])
+        chin_src, _ = find_emg(hdr)
+        if chin_src is None:
+            raise ValueError(f"{rec}: no chin EMG among {[c.label for c in hdr.channels]}")
+        chin, fs, unit_known, label, _ = read_source(hdr, chin_src)
+        ecg_src = find_ecg(hdr)
+        ecg, fs_e = read_source(hdr, ecg_src)[:2] if ecg_src is not None else (None, None)
+        eeg_ch = _central_eeg(hdr.channels)
+        eeg, fs_g = read_channel(hdr, eeg_ch)[:2] if eeg_ch else (None, None)
+        hyp, _ = build_hypnogram(files["edf"], files["txt"], len(chin) / fs)
+        return dict(chin=chin, fs=fs, unit_known=unit_known, chin_label=label,
+                    ecg=ecg, fs_ecg=fs_e, legs=[], hypnogram=hyp, flags={}, extra={},
+                    eeg=eeg, fs_eeg=fs_g, eeg_label=eeg_ch.label if eeg_ch else None)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  CHALLENGE 2018 (MGH)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -72,10 +125,22 @@ class Chal18:
     def read(self, rec, files):
         import wfdb
         base = str(files["hea"])[:-4]
-        sig = wfdb.rdrecord(base, channel_names=["Chin1-Chin2", "ECG"])
-        units = [u.lower() for u in sig.units]
-        chin = sig.p_signal[:, 0] * (1e3 if units[0] == "mv" else 1.0)
-        ecg = sig.p_signal[:, 1] * (1e3 if units[1] == "mv" else 1.0)
+        names = wfdb.rdheader(base).sig_name
+        eeg_name = next((n for n in ("C4-M1", "C3-M2") if n in names), None)
+        sig = wfdb.rdrecord(base, channel_names=[n for n in ("Chin1-Chin2", "ECG", eeg_name)
+                                                 if n in names])
+        col = {n: i for i, n in enumerate(sig.sig_name)}
+
+        def channel(name):                        # microvolts, and whether units are known
+            if name not in col:
+                return None, False
+            unit = sig.units[col[name]].lower()
+            return sig.p_signal[:, col[name]] * (1e3 if unit == "mv" else 1.0), \
+                unit in ("uv", "mv")
+
+        chin, unit_known = channel("Chin1-Chin2")
+        ecg, _ = channel("ECG")
+        eeg, _ = channel(eeg_name)
         fs = float(sig.fs)
         n_ep = int(len(chin) / fs // EPOCH_SEC)
 
@@ -104,9 +169,10 @@ class Chal18:
         n_resp = sum(1 for n in ann.aux_note if n.startswith("(resp_"))
         sleep_h = np.isin(hyp, (1, 2, 3, 4)).sum() * EPOCH_SEC / 3600.0
         extra = {"ahi": round(n_resp / sleep_h, 1) if sleep_h > 0 else None}
-        return dict(chin=chin, fs=fs, unit_known=units[0] in ("uv", "mv"),
+        return dict(chin=chin, fs=fs, unit_known=unit_known,
                     chin_label="Chin1-Chin2", ecg=ecg, fs_ecg=fs, legs=[],
-                    hypnogram=hyp, flags=flags, extra=extra)
+                    hypnogram=hyp, flags=flags, extra=extra,
+                    eeg=eeg, fs_eeg=fs, eeg_label=eeg_name)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -137,8 +203,10 @@ class HMC:
         hdr = read_header(files["edf"])
         chin_ch = next(c for c in hdr.channels if "CHIN" in c.label.upper())
         ecg_ch = next((c for c in hdr.channels if "ECG" in c.label.upper()), None)
+        eeg_ch = _central_eeg(hdr.channels)
         chin, fs, unit_known = read_channel(hdr, chin_ch)
         ecg, fs_e = (read_channel(hdr, ecg_ch)[:2]) if ecg_ch else (None, None)
+        eeg, fs_g = (read_channel(hdr, eeg_ch)[:2]) if eeg_ch else (None, None)
         n_ep = int(len(chin) / fs // EPOCH_SEC)
         hyp = np.full(n_ep, -1, np.int8)
         text = Path(files["txt"]).read_text(encoding="latin-1").splitlines()
@@ -151,7 +219,8 @@ class HMC:
             if code is not None and 0 <= e < n_ep:
                 hyp[e] = code
         return dict(chin=chin, fs=fs, unit_known=unit_known, chin_label=chin_ch.label,
-                    ecg=ecg, fs_ecg=fs_e, legs=[], hypnogram=hyp, flags={}, extra={})
+                    ecg=ecg, fs_ecg=fs_e, legs=[], hypnogram=hyp, flags={}, extra={},
+                    eeg=eeg, fs_eeg=fs_g, eeg_label=eeg_ch.label if eeg_ch else None)
 
 
 class HMCDegraded(HMC):
@@ -209,20 +278,25 @@ COHORTS = {"chal18": Chal18(), "hmc": HMC(),
            "hmc_mgh": HMCDegraded("hmc_mgh", fs_out=200, lsb_uv=1.0),
            "hmc_low": HMCDegraded("hmc_low", gain=0.39),
            "hmc_low_mgh": HMCDegraded("hmc_low_mgh", fs_out=200, lsb_uv=1.0, gain=0.39),
-           "chal18_noise": Chal18Noisy("chal18_noise", noise_uv=1.5)}
+           "chal18_noise": Chal18Noisy("chal18_noise", noise_uv=1.5),
+           "cap": CAP()}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  COMMON: raw signals -> pack
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _beats(d):
+    """R-peak times (s) from the record's ECG, or none if they do not look real."""
+    if d.get("ecg") is None:
+        return np.empty(0)
+    beats = r_peaks(d["ecg"], d["fs_ecg"])
+    return beats if plausible(beats, len(d["ecg"]) / d["fs_ecg"]) else np.empty(0)
+
+
 def extract_pack(cohort, rec, d, demo=None):
     """Envelopes, heartbeat removal and packing for one record's signals."""
-    beats = np.empty(0)
-    if d.get("ecg") is not None:
-        beats = r_peaks(d["ecg"], d["fs_ecg"])
-        if not plausible(beats, len(d["ecg"]) / d["fs_ecg"]):
-            beats = np.empty(0)
+    beats = _beats(d)
     x, fs, mains = d["chin"], d["fs"], cohort.mains
     rms, mav, band = envelope(x, fs, mains=mains, beats_s=beats)
     rms_h, mav_h, band_h = envelope(x, fs, band=HARMONIZED_BAND, mains=mains, beats_s=beats)
@@ -240,3 +314,101 @@ def extract_pack(cohort, rec, d, demo=None):
     }
     chin = {"rms": rms, "mav": mav, "rms_h": rms_h, "mav_h": mav_h, "rms_with_ecg": rms_raw}
     return build_pack(chin, legs, d["hypnogram"], ENV_FS, EPOCH_SEC, meta, d.get("flags"))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  THE NOISE LADDER: the same night at several noise floors
+# ══════════════════════════════════════════════════════════════════════════════
+
+LADDER_UV = (0.5, 1.0, 1.5, 2.0, 3.0)   # in-band RMS of the added noise, uV
+TARGETS_UV = (1.5, 2.0)                 # quiet-REM level after harmonisation, uV
+EEG_BAND = (40.0, 90.0)                 # where EEG is mostly the system's own noise
+
+
+def quiet_level(rms, hypnogram, env_fs=ENV_FS):
+    """5th percentile of 1 s RMS over REM: the background the relative
+    criteria are multiples of ('p5_rem' in rwa.py)."""
+    from .rwa import mini_epoch_rms
+    per = int(round(env_fs * EPOCH_SEC))
+    hyp = np.asarray(hypnogram)[: len(rms) // per]
+    rem = np.flatnonzero(hyp == 4)
+    if len(rem) == 0:
+        return float("nan")
+    r, _ = mini_epoch_rms(rms[(rem[:, None] * per + np.arange(per)[None, :]).reshape(-1)],
+                          env_fs, 1.0)
+    return float(np.percentile(r, 5)) if len(r) >= 10 else float("nan")
+
+
+def eeg_floor(eeg, fs, hypnogram, mains, band=EEG_BAND):
+    """The 40-90 Hz floor (5th percentile of 1 s RMS) of an EEG channel in N2/N3
+    and in REM: an estimate of the recording system's own noise, measured on a
+    channel other than the chin."""
+    from .extract import bandpass, bin_envelope
+    if eeg is None or not fs or fs / 2.0 - 5.0 < band[0] + 10.0:
+        return {}
+    x, (lo, hi) = bandpass(eeg, fs, band, mains)
+    sec, _ = bin_envelope(x, fs, env_fs=1)
+    n = min(len(sec), len(hypnogram) * EPOCH_SEC)
+    stage = np.repeat(np.asarray(hypnogram), EPOCH_SEC)[:n]
+    out = {"band": [lo, hi]}
+    for name, codes in (("nrem", (2, 3)), ("rem", (4,))):
+        v = sec[:n][np.isin(stage, codes)]
+        out[f"floor_{name}_uv"] = round(float(np.percentile(v, 5)), 4) if len(v) >= 60 else None
+    return out
+
+
+def extract_ladder_pack(cohort, rec, d, demo=None):
+    """
+    The night's chin EMG as recorded (native band, heartbeat removed) and with
+    white noise added in band: at each LADDER_UV level, and at the level that
+    raises its quiet-REM level to each TARGETS_UV. Filtering and heartbeat
+    removal are linear, so the signal and one unit-RMS noise track (seeded by
+    record name) are filtered once and every copy is their sum - the same noise
+    draw scaled, i.e. common random numbers across levels.
+    """
+    import zlib
+    from .ecg import subtract_heartbeat
+    from .extract import bandpass, bin_envelope
+    beats = _beats(d)
+    x, fs, mains, hyp = d["chin"], d["fs"], cohort.mains, d["hypnogram"]
+    xf, band = bandpass(x, fs, mains=mains)
+    if len(beats):
+        xf = subtract_heartbeat(xf, fs, beats)
+    rms, mav = bin_envelope(xf, fs)
+    chin = {"rms": rms, "mav": mav}
+    level = quiet_level(rms, hyp)
+    ladder = {}
+    if d["unit_known"] and np.isfinite(level):
+        rng = np.random.default_rng(zlib.crc32(rec.encode()))
+        nf, _ = bandpass(rng.normal(0.0, 1.0, len(x)), fs, mains=mains)
+        edge = int(5 * fs)
+        nf /= np.sqrt(np.mean(nf[edge:-edge] ** 2))
+        for u in LADDER_UV:
+            r, m = bin_envelope(xf + u * nf, fs)
+            chin[f"rms_n{round(u * 100):03d}"], chin[f"mav_n{round(u * 100):03d}"] = r, m
+            ladder[f"n{round(u * 100):03d}"] = {"added_uv": u, "level_uv": round(quiet_level(r, hyp), 3)}
+        for t in TARGETS_UV:
+            # The 5th percentile catches seconds where the noise itself dips, so
+            # sqrt(t^2 - level^2) undershoots; rescale until within 1% of t.
+            s, r, m, got = float(np.sqrt(max(t * t - level * level, 0.0))), rms, mav, level
+            for _ in range(4):
+                if s <= 0 or abs(got - t) <= 0.01 * t:
+                    break
+                r, m = bin_envelope(xf + s * nf, fs)
+                got = quiet_level(r, hyp)
+                if abs(got - t) > 0.01 * t:
+                    s *= np.sqrt((t * t - level * level) / max(got * got - level * level, 1e-9))
+            chin[f"rms_h{round(t * 100):03d}"], chin[f"mav_h{round(t * 100):03d}"] = r, m
+            ladder[f"h{round(t * 100):03d}"] = {"added_uv": round(s, 3), "level_uv": round(got, 3)}
+        del nf
+    meta = {
+        "record": rec, "cohort": cohort.name, "chin_channel": d["chin_label"],
+        "chin_fs": fs, "band": list(band), "unit_known": bool(d["unit_known"]),
+        "mains_notch": mains, "duration_s": round(len(x) / fs, 1),
+        "level_uv": round(level, 4) if np.isfinite(level) else None, "ladder": ladder,
+        "ecg": {"beats": int(len(beats))},
+        "eeg": dict(eeg_floor(d.get("eeg"), d.get("fs_eeg"), hyp, mains),
+                    channel=d.get("eeg_label")),
+        **(demo or {}), **d.get("extra", {}),
+    }
+    return build_pack(chin, [], hyp, ENV_FS, EPOCH_SEC, meta, d.get("flags"))

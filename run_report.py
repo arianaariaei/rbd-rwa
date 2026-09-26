@@ -24,6 +24,8 @@ Prints (and writes to results/report.md):
   T12 simulated recordings (hardware, amplitude, noise floor) against the
       cohort they were made from, on the same nights
   T13 MGH positive calls by apnea-hypopnea index, all REM and event-free REM
+  T15 the same without transitional epochs (first and last of each REM period)
+  T16 the floor signature: quietest N2/N3 over quietest REM chin level
   T8  heartbeat artefact in the chin EMG before and after its removal
   T14 MGH positive calls by the residual heartbeat artefact
 
@@ -59,6 +61,21 @@ def wilson(k, n, z=1.96):
     c = (p + z * z / (2 * n)) / d
     h = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
     return p, max(0.0, c - h), min(1.0, c + h)
+
+
+def paired_change(before, after):
+    """Change in the share positive on the same nights: difference with a 95%
+    Wald interval for paired proportions, and the exact McNemar test."""
+    from scipy.stats import binomtest
+    before, after = np.asarray(before, float), np.asarray(after, float)
+    n = len(before)
+    up = int(((before == 0) & (after == 1)).sum())
+    down = int(((before == 1) & (after == 0)).sum())
+    d = (up - down) / n
+    se = np.sqrt(max(up + down - (up - down) ** 2 / n, 0.0)) / n
+    p = binomtest(up, up + down).pvalue if up + down else 1.0
+    return (f"diff {100 * d:+.1f} [{100 * (d - 1.96 * se):+.1f} to {100 * (d + 1.96 * se):+.1f}]  "
+            f"{down} nights -, {up} +, McNemar p={p:.1g}")
 
 
 def kappa(a, b):
@@ -148,7 +165,7 @@ def main():
 
     # T5 ─────────────────────────────────────────────────────────────────────
     ev = df[(df.cohort == "chal18") & (df.band == "native") & df.method.isin(DECIDING)
-            & (df.rem_minutes >= MIN_REM)]
+            & (df.rem_minutes >= MIN_REM) & df.excluded.fillna("").isin(["", "resp+arousal"])]
     if len(ev) and (ev.excluded.fillna("") != "").any():
         say("T5  Excluding REM epochs with respiratory events or arousals (MGH), % positive")
         w = ev.pivot_table(index=["record", "method"], columns=ev.excluded.fillna(""),
@@ -290,10 +307,45 @@ def main():
         if pair.empty:
             continue
         lvl = pair[pair.method == "Montreal"]
-        cells = [f"{meth} {100 * g.y_src.mean():.0f}% -> {100 * g.y.mean():.0f}%"
-                 for meth, g in pair.groupby("method")]
-        say(f"  {sim:<12} vs {src:<8} n={len(lvl):<4} level {lvl.quiet_src.median():.2f} -> "
-            f"{lvl.quiet.median():.2f} uV   " + "   ".join(cells))
+        say(f"  {sim:<12} vs {src:<8} n={len(lvl):<4} quiet-REM level {lvl.quiet_src.median():.2f}"
+            f" -> {lvl.quiet.median():.2f} uV")
+        for meth, g in pair.groupby("method"):
+            say(f"      {meth:<9} {100 * g.y_src.mean():3.0f}% -> {100 * g.y.mean():3.0f}%   "
+                + paired_change(g.y_src.to_numpy(), g.y.to_numpy()))
+    say("    (paired difference with 95% CI; exact McNemar test on the nights that changed)")
+    say()
+
+    # T15 ────────────────────────────────────────────────────────────────────
+    bd = df[(df.band == "native") & df.method.isin(DECIDING) & (df.rem_minutes >= MIN_REM)
+            & df.excluded.fillna("").isin(["", "boundary"])]
+    if (bd.excluded.fillna("") == "boundary").any():
+        say("T15 Without the first and last epoch of every REM period (transitional epochs),")
+        say("    % positive: all REM -> without them")
+        bd = bd.assign(y=bd.positive.map(lambda x: float(x in (True, "True", 1, 1.0))
+                                         if pd.notna(x) else np.nan))
+        w = bd.pivot_table(index=["who", "record", "method"], columns=bd.excluded.fillna(""),
+                           values="y", aggfunc="first").dropna()
+        gap = {}
+        for (who, meth), g in w.groupby(level=["who", "method"]):
+            if who in SIMULATED or len(g) < 10:
+                continue
+            a, b = g[""].mean(), g["boundary"].mean()
+            gap[who, meth] = (a, b)
+            say(f"  {who:<16} {meth:<9} {100 * a:3.0f}% -> {100 * b:3.0f}%   (n={len(g)})")
+        for meth in DECIDING:
+            if ("chal18", meth) in gap and ("hmc", meth) in gap:
+                (a1, b1), (a2, b2) = gap["chal18", meth], gap["hmc", meth]
+                say(f"  MGH-HMC gap, {meth}: {100 * (a1 - a2):+.0f} -> {100 * (b1 - b2):+.0f} points")
+        say()
+
+    # T16 ────────────────────────────────────────────────────────────────────
+    say("T16 Floor signature: quietest N2/N3 chin level over quietest REM level (1 = the two")
+    say("    are indistinguishable, i.e. the floor is the recording's own noise), median [IQR]")
+    aasm = base[(base.band == "native") & (base.method == "AASM")]
+    for who, g in aasm.groupby("who"):
+        r = (g.background_tonic_uV / g.background_phasic_uV).dropna()
+        if len(r) >= 5:
+            say(f"  {who:<16} n={len(r):<5} {r.median():.2f} [{r.quantile(.25):.2f}-{r.quantile(.75):.2f}]")
     say()
 
     # T8 ─────────────────────────────────────────────────────────────────────

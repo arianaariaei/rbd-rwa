@@ -172,7 +172,8 @@ METHODS = {
 #  SCORING A NIGHT (from a pack: REM epochs at full resolution, see pack.py)
 # ══════════════════════════════════════════════════════════════════════════════
 
-# band -> (RMS row, mean-rectified row) of the pack
+# band -> (RMS row, mean-rectified row) of the pack. Any other name X selects
+# the rows "rms_X" and "mav_X" (the noise-ladder copies, see cohorts.py).
 BANDS = {"native": ("rms", "mav"), "harmonized": ("rms_h", "mav_h"),
          "native_with_ecg": ("rms_with_ecg", None)}
 
@@ -181,7 +182,7 @@ def _select(pack, band, exclude=()):
     """REM epoch numbers and (n_epochs, bins) arrays for a band, minus any
     REM epoch carrying one of the `exclude` flags."""
     rows = pack["meta"]["rows"]
-    rk, mk = BANDS[band]
+    rk, mk = BANDS.get(band, (f"rms_{band}", f"mav_{band}"))
     ep = pack["rem_epochs"]
     keep = np.ones(len(ep), bool)
     for name in exclude or ():

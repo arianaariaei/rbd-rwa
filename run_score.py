@@ -48,6 +48,18 @@ def auc(pos, neg):
     return float(((diff > 0) + 0.5 * (diff == 0)).mean()), len(pos), len(neg)
 
 
+def rem_boundaries(pack):
+    """Flag the first and last epoch of every REM period: transitional epochs,
+    where scoring conventions differ most between laboratories."""
+    flag = np.zeros(len(pack["hypnogram"]), np.int8)
+    ep = pack["rem_epochs"]
+    if len(ep):
+        brk = np.flatnonzero(np.diff(ep) != 1)
+        flag[ep[np.r_[0, brk + 1]]] = 1
+        flag[ep[np.r_[brk, len(ep) - 1]]] = 1
+    return flag
+
+
 def score_everything():
     rows = []
     for cohort_dir in sorted((config.DURABLE / "packs").glob("*")):
@@ -62,8 +74,9 @@ def score_everything():
                         chin_fs=m.get("chin_fs", m.get("chin_info", {}).get("fs")),
                         unit_known=m.get("unit_known", True))
             exclusions = [()] + ([("resp", "arousal")] if pack["epoch_flags"] else [])
+            pack["epoch_flags"] = dict(pack["epoch_flags"], boundary=rem_boundaries(pack))
             for band in ("native", "harmonized"):
-                for ex in exclusions:
+                for ex in exclusions + ([("boundary",)] if band == "native" else []):
                     for r in score_all(pack, band, ex):
                         rows.append({**info, **r})
     df = pd.DataFrame(rows)

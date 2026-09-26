@@ -4,6 +4,7 @@
     python run_cohort.py --cohort hmc                # 148 Haaglanden PSGs
     python run_cohort.py --cohort chal18 --limit 5   # quick test
     python run_cohort.py --cohort cap                # repack CAP's derived files
+    python run_cohort.py --cohort hmc --ladder       # noise ladder (see cohorts.py)
 
 Several records are processed at once (--workers), each in its own process,
 so downloads overlap with computation. Progress is written to a manifest
@@ -25,10 +26,11 @@ from src import config
 from src.pack import save_pack
 
 
-def _work(name, rec, demo, scratch, out_path, keep_raw):
+def _work(name, rec, demo, scratch, out_path, keep_raw, ladder=False):
     """Runs in a worker process: one record from download to pack."""
-    from src.cohorts import COHORTS, extract_pack
+    from src.cohorts import COHORTS, extract_pack, extract_ladder_pack
     cohort = COHORTS[name]
+    extract = extract_ladder_pack if ladder else extract_pack
     t0 = time.time()
     folder = Path(scratch) / rec
     folder.mkdir(parents=True, exist_ok=True)
@@ -36,12 +38,12 @@ def _work(name, rec, demo, scratch, out_path, keep_raw):
         files = cohort.fetch(rec, folder)
         t_dl = time.time() - t0
         d = cohort.read(rec, files)
-        pack = extract_pack(cohort, rec, d, demo)
+        pack = extract(cohort, rec, d, demo)
         save_pack(Path(out_path), pack)
         m = pack["meta"]
         return rec, {"seconds": round(time.time() - t0, 1), "download_s": round(t_dl, 1),
                      "rem_min": round(m["n_rem_epochs"] * 0.5, 1),
-                     "ecg": m["ecg"]["artifact_ratio_before"]}, None
+                     "ecg": m["ecg"].get("artifact_ratio_before", m["ecg"]["beats"])}, None
     except Exception as e:
         return rec, None, f"{type(e).__name__}: {e} | {traceback.format_exc(limit=2)[-300:]}"
     finally:
@@ -121,21 +123,24 @@ def main():
     ap.add_argument("--keep-raw", action="store_true")
     ap.add_argument("--mirror", default=None,
                     help="also copy each finished pack here (e.g. a Drive folder)")
+    ap.add_argument("--ladder", action="store_true",
+                    help="build noise-ladder packs (DURABLE/ladder) instead of packs")
     args = ap.parse_args()
 
-    out_dir = config.DURABLE / "packs" / args.cohort
+    kind = "ladder" if args.ladder else "packs"
+    out_dir = config.DURABLE / kind / args.cohort
     out_dir.mkdir(parents=True, exist_ok=True)
     mirror = Mirror(Path(args.mirror) / args.cohort if args.mirror else None)
     restored = mirror.restore(out_dir)
     if restored:
         print(f"restored {restored} packs from {mirror.path}", flush=True)
-    if args.cohort == "cap":
+    if args.cohort == "cap" and not args.ladder:
         repack_cap(out_dir, mirror)
         return
 
     from src.cohorts import COHORTS
     cohort = COHORTS[args.cohort]
-    manifest = config.MANIFESTS / f"{args.cohort}_packs.json"
+    manifest = config.MANIFESTS / f"{args.cohort}_{kind}.json"
     m = json.loads(manifest.read_text()) if manifest.exists() else {"done": {}, "failed": {}}
     records = cohort.records()
     demo = cohort.demographics()
@@ -150,7 +155,8 @@ def main():
     t_start = time.time()
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
         futs = [ex.submit(_work, args.cohort, r, demo.get(r), str(config.SCRATCH),
-                          str(out_dir / f"{r}.npz"), args.keep_raw) for r in todo]
+                          str(out_dir / f"{r}.npz"), args.keep_raw, args.ladder)
+                for r in todo]
         for i, f in enumerate(as_completed(futs), 1):
             rec, info, err = f.result()
             if err:

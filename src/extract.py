@@ -121,7 +121,13 @@ def envelope(sig, fs, env_fs=ENV_FS, band=EMG_BAND, mains=None, beats_s=None):
     x, (lo, hi) = bandpass(sig, fs, band, mains)
     if beats_s is not None and len(beats_s):
         x = subtract_heartbeat(x, fs, beats_s)
+    rms, mav = bin_envelope(x, fs, env_fs)
+    return rms, mav, (lo, hi)
 
+
+def bin_envelope(x, fs, env_fs=ENV_FS):
+    """RMS and mean-rectified amplitude of an already filtered signal, per bin
+    of exactly 1/env_fs seconds."""
     n_bins = int(np.floor(len(x) * env_fs / fs))
     if n_bins == 0:
         raise ValueError("signal shorter than one envelope bin")
@@ -129,7 +135,7 @@ def envelope(sig, fs, env_fs=ENV_FS, band=EMG_BAND, mains=None, beats_s=None):
     counts = np.diff(edges)
     rms = np.sqrt(np.add.reduceat(x * x, edges[:-1]) / counts)
     mav = np.add.reduceat(np.abs(x), edges[:-1]) / counts
-    return rms.astype(np.float32), mav.astype(np.float32), (lo, hi)
+    return rms.astype(np.float32), mav.astype(np.float32)
 
 
 def _describe(label, ch, fs, unit_known, band, x):
