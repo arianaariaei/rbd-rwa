@@ -23,7 +23,9 @@ Prints (and writes to results/report.md):
       ratio per halving of that level, adjusted for age, sex and AHI
   T12 simulated recordings (hardware, amplitude, noise floor) against the
       cohort they were made from, on the same nights
+  T13 MGH positive calls by apnea-hypopnea index, all REM and event-free REM
   T8  heartbeat artefact in the chin EMG before and after its removal
+  T14 MGH positive calls by the residual heartbeat artefact
 
 Nights with less than MIN_REM minutes of REM are left out, as clinical
 scoring would.
@@ -158,6 +160,20 @@ def main():
                 f"(changed on {100 * (a != b).mean():.0f}% of nights)")
         say()
 
+        # T13 ────────────────────────────────────────────────────────────────
+        say("T13 MGH: % positive by apnea-hypopnea index, all REM and event-free REM")
+        ev = ev.assign(y=ev.positive.map(lambda x: float(x in (True, "True", 1, 1.0))
+                                         if pd.notna(x) else np.nan),
+                       ahi_cat=pd.cut(ev.ahi, [-1, 5, 15, 30, np.inf],
+                                      labels=["AHI<5", "5-15", "15-30", ">=30"]),
+                       rem=np.where(ev.excluded.fillna("") == "", "all REM", "event-free"))
+        t = ev.pivot_table(index=["method", "rem"], columns="ahi_cat", values="y",
+                           aggfunc="mean", observed=False) * 100
+        say(t.round(0).to_string())
+        n = ev[(ev.method == "Montreal") & (ev.rem == "all REM")].ahi_cat.value_counts()
+        say("  nights: " + "  ".join(f"{k} {n.get(k, 0)}" for k in t.columns))
+        say()
+
     # T6 ─────────────────────────────────────────────────────────────────────
     say("T6  Screening: positive predictive value at a given RBD prevalence")
     say("    sensitivity from CAP RBD; specificity from the pooled external cohorts")
@@ -283,6 +299,7 @@ def main():
     # T8 ─────────────────────────────────────────────────────────────────────
     say("T8  Heartbeat artefact in chin EMG (heartbeat-locked ratio; 1 = none), median [p90]")
     import json
+    residual = {}                                    # (cohort, record) -> ratio after removal
     for cdir in sorted((config.DURABLE / "packs").glob("*")):
         before, after = [], []
         for p in cdir.glob("*.npz"):
@@ -294,10 +311,23 @@ def main():
             if e.get("beats"):
                 before.append(e.get("artifact_ratio_before", np.nan))
                 after.append(e.get("artifact_ratio_after", np.nan))
+                residual[(cdir.name, meta.get("record", p.stem))] = after[-1]
         if before:
             b, a = np.array(before, float), np.array(after, float)
             say(f"  {cdir.name:<7} n={len(b):<5} before {np.nanmedian(b):.2f} [{np.nanpercentile(b, 90):.2f}]"
                 f"   after {np.nanmedian(a):.2f} [{np.nanpercentile(a, 90):.2f}]")
+    say()
+
+    # T14 ────────────────────────────────────────────────────────────────────
+    art = nat[nat.cohort == "chal18"].copy()
+    art["art"] = [residual.get(("chal18", r), np.nan) for r in art.record]
+    art = art.dropna(subset=["art"])
+    if len(art):
+        say("T14 MGH: % positive by residual heartbeat artefact (tertiles of the ratio after removal)")
+        art["t"] = pd.qcut(art.art, 3, labels=False)
+        for meth, g in art.groupby("method"):
+            say(f"  {meth:<9} " + "   ".join(f"ratio {g.art[g.t == k].median():.2f}: "
+                                            f"{100 * g.y[g.t == k].mean():3.0f}%" for k in range(3)))
 
     out = config.RESULTS / "report.md"
     out.write_text("```\n" + "\n".join(lines) + "\n```\n", encoding="utf-8")
