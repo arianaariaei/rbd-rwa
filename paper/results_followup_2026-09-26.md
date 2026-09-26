@@ -122,6 +122,26 @@ By residual heartbeat artefact (tertile medians of the ratio after removal 1.01 
 artefact effect (the ratio is itself lower when genuine EMG is higher). By age (<40, 40-60,
 >60 y): Montreal 28 / 29 / 31%, SINBAR 76 / 78 / 74%, RAI 11 / 8 / 9%.
 
+## F2f Does our automated scoring reproduce published values?
+
+CAP, native band, all REM, mean +/- SD (median), % of mini-epochs or epochs:
+
+| measure | our CAP RBD (n=22) | Frauscher 2012 RBD (n=30) | our CAP healthy (n=15) | our CAP patients (n=51) | Frauscher 2012 controls (n=30) |
+|---|---|---|---|---|---|
+| SINBAR "any" | 73.2 +/- 21.3 (80.9) | 66.5 +/- 25.2 | 28.2 +/- 20.8 (24.8) | 37.9 +/- 24.6 (32.3) | 8.4 +/- 4.6 |
+| SINBAR phasic | 69.0 +/- 20.2 (77.2) | 40.9 +/- 19.0 | 21.9 +/- 11.0 (23.9) | 32.1 +/- 21.6 (27.6) | 7.3 +/- 3.7 |
+| SINBAR tonic | 51.4 +/- 23.5 (59.8) | 51.8 +/- 32.8 | 12.8 +/- 21.5 (4.4) | 17.4 +/- 21.7 (9.1) | 1.4 +/- 1.9 |
+| Montreal tonic | 51.4 +/- 22.7 (59.1) | - | 13.1 +/- 21.3 (5.2) | 17.9 +/- 21.4 (9.6) | - |
+| Montreal phasic | 36.3 +/- 16.0 (36.7) | - | 10.5 +/- 10.8 (7.3) | 13.8 +/- 14.1 (8.8) | - |
+
+The automated measures reproduce the published RBD levels for "any" and tonic activity
+(phasic is higher), but patients without RBD score three to five times higher than the
+published controls - the false-positive problem sits in the non-RBD distribution, which is
+where a low noise floor lets small twitches cross a background-relative threshold. (Our
+controls are not Frauscher's: theirs were treated sleep-apnoea patients recorded with the
+full SINBAR montage and scored visually.) Montplaisir 2010 reports classification rates
+(81.9% tonic, 83.8% phasic; 80 iRBD v 80 controls) rather than group means.
+
 ## F3 Background definition: share flagged positive (%) and RBD separation (AUC)
 
 "Background" = the reference the relative thresholds are multiples of. Default p5_rem =
@@ -190,3 +210,62 @@ of false positives (Montreal phasic); the
 re-derived thresholds still flag far fewer external nights than the published ones
 (e.g. SINBAR any: MGH 76% -> 10%, HMC 25% -> 1%). With 22 RBD patients the cut-offs
 themselves are uncertain (wide bootstrap intervals).
+
+## F5 The noise ladder (pre-specified in preregistration_noise_ladder.md, commit 6d3cc6b)
+
+Same nights re-streamed; white noise added in band (common random numbers). Published
+cut-offs; nights >= 10 min REM. CAP RBD and CAP patients = main system (512 Hz, uV).
+
+Share flagged positive (%) at each step; median quiet-REM level (uV) in brackets:
+
+| group | as recorded | +0.5 | +1.0 | +1.5 | +2.0 | +3.0 uV | harmonised 1.5 | harmonised 2.0 |
+|---|---|---|---|---|---|---|---|---|
+| CAP RBD (n=21) level | 0.86 | 0.99 | 1.31 | 1.71 | 2.13 | 3.02 | 1.50 | 2.00 |
+| - Montreal | 90 | 86 | 71 | 57 | 52 | 19 | 57 | 57 |
+| - SINBAR | 95 | 95 | 95 | 95 | 81 | 67 | 95 | 86 |
+| - RAI | 57 | 57 | 57 | 57 | 52 | 43 | 57 | 52 |
+| CAP patients (n=51) level | 0.48 | 0.68 | 1.06 | 1.49 | 1.93 | 2.82 | 1.50 | 2.00 |
+| - Montreal | 33 | 18 | 16 | 12 | 12 | 10 | 14 | 12 |
+| - SINBAR | 75 | 53 | 37 | 24 | 22 | 20 | 25 | 24 |
+| - RAI | 14 | 14 | 12 | 12 | 12 | 12 | 14 | 14 |
+| MGH (n=280) level | 0.56 | 0.74 | 1.10 | 1.52 | 1.95 | 2.84 | 1.50 | 2.00 |
+| - Montreal | 34 | 23 | 15 | 9 | 8 | 6 | 12 | 9 |
+| - SINBAR | 83 | 68 | 44 | 29 | 22 | 13 | 33 | 22 |
+| - RAI | 12 | 11 | 10 | 10 | 10 | 8 | 11 | 10 |
+| HMC (n=147) level | 1.52 | 1.59 | 1.79 | 2.07 | 2.40 | 3.16 | 1.52 | 2.00 |
+| - Montreal | 9 | 9 | 9 | 8 | 7 | 7 | 9 | 8 |
+| - SINBAR | 25 | 21 | 17 | 15 | 12 | 7 | 22 | 17 |
+| - RAI | 7 | 7 | 7 | 7 | 6 | 6 | 7 | 7 |
+
+### Criteria
+
+| # | criterion | result | verdict |
+|---|---|---|---|
+| 1 | harmonised to 2.0 uV, MGH - HMC <= 3 (Montreal) / <= 5 (SINBAR) points | Montreal 9 [6-13] vs 8 [5-14]: +0.8; SINBAR 22 [18-28] vs 17 [12-24]: +5.5 (as recorded: +25.1 and +57.9) | met for Montreal; narrowly missed for SINBAR (90% of the gap removed) |
+| 2 | MGH's ladder at HMC's own level (1.52 uV) within 3 / 5 points of HMC | Montreal 8.9 vs 8.8 (+0.1); SINBAR 29.2 vs 25.2 (+4.1); RAI 10.4 vs 7.5 | met |
+| 3 | RBD sensitivity < 70% at 2.0 uV = noisier systems miss RBD | Montreal 57%; SINBAR 86%; RAI 52% | supported (Montreal) |
+| 4 | remedy: harmonise to 2.0 uV, re-derive on CAP; gap <= 5 and LOO sens >= 80% | Montreal phasic cut 5.4%: LOO 76%, MGH 21 [8-47] vs HMC 10 [5-16]; Montreal tonic cut 1.5%: LOO 71%, 40 vs 19; SINBAR any cut 13.7%: LOO 90%, 30 vs 20 | not met: harmonisation plus re-derivation is not a working remedy |
+| 5 | HMC/MGH EEG 40-90 Hz floor >= 1.5 = system-wide | EEG N2/N3 floor: CAP 0.16 [0.15-0.20], MGH 0.23 [0.22-0.25], HMC 0.46 [0.41-0.82]; ratio 1.98 | met: HMC's system is noisier on EEG too |
+| 6 | dropping transitional REM epochs changes the Montreal gap by < 3 points | Montreal gap +20 -> +16; SINBAR +51 -> +52; RAI +1 -> +1 | narrowly not met: REM-boundary epochs carry ~4 of the 20 Montreal points, none of SINBAR's |
+
+Notes:
+- Without harmonisation, the cut-offs re-derived on CAP (as in T10) give, on these 300 MGH
+  nights: Montreal phasic 27.7% -> MGH 9%, HMC 5% (gap +5); Montreal tonic 32.2% -> 16% vs
+  7%; SINBAR any 62.9% -> 16% vs 1%.
+- Why the remedy fails: harmonising to 2 uV makes MGH and HMC agree under the published
+  cut-offs (Montreal 9 vs 8%) but costs RBD sensitivity (Montreal 90 -> 57%). Re-deriving
+  cut-offs on the harmonised CAP data to win sensitivity back pushes them very low (1.5-14%),
+  into the part of the distributions where the two sites still differ.
+- MGH's EEG floor (0.23 uV) is near its 1-uV quantisation noise in that band (~0.2 uV), so
+  its amplifier noise may be lower still; the HMC/MGH ratio is then a lower bound.
+- The CAP healthy group (mixed hardware; 12 with physical units) is not used for criteria.
+
+## F6 Paired tests for the simulations (T12)
+
+| simulation vs source | n | Montreal | SINBAR | RAI |
+|---|---|---|---|---|
+| HMC 1 uV vs HMC | 147 | 9 -> 9 (0 changed) | 25 -> 24 (1 -) | 7 -> 7 |
+| HMC 1 uV + 200 Hz vs HMC | 147 | 9 -> 9 | 25 -> 22: -2.7 [-5.4 to -0.1], 4 -, p=0.1 | 7 -> 7 |
+| HMC x0.39 vs HMC | 147 | 9 -> 8 (1 -) | 25 -> 25 | 7 -> 3: -4.1 [-7.3 to -0.9], 6 -, p=0.03 |
+| HMC x0.39 MGH-format vs HMC x0.39 | 147 | 8 -> 8 | 25 -> 20: -5.4 [-9.1 to -1.8], 8 -, p=0.008 | 3 -> 3 |
+| MGH + 1.5 uV noise vs MGH | 277 | 34 -> 10: -23.5 [-28.5 to -18.5], 65 -, 0 +, p=5e-20 | 83 -> 36: -47.3 [-53.2 to -41.4], 131 -, 0 +, p=7e-40 | 12 -> 10: -1.4 [-2.8 to 0.0], 4 -, p=0.1 |

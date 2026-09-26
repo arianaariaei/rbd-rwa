@@ -43,3 +43,21 @@ Share of nights flagged positive, by tertile of the quiet-REM level within (A) M
 HMC. A lower quiet-REM level did not make a night more likely to be flagged by the relative
 criteria; the RAI, built on absolute amplitude, flagged nights with a higher level more
 often.
+
+**Figure 6. The noise ladder: verdicts follow the recording's noise floor.**
+Share of nights flagged positive by each method's published cut-off as white noise is
+added to the chin EMG (0.5, 1.0, 1.5, 2.0 and 3.0 uV in-band RMS), plotted against the
+group's median quiet-REM level (log scale). Filled circles: as recorded; open circles:
+noise added; stars: every night harmonised to a quiet-REM level of 2.0 uV. CAP RBD and CAP
+patients were recorded on CAP's main system (512 Hz); MGH: the first 300 Challenge 2018
+records; HMC: all nights. Read at HMC's own level (1.52 uV), MGH's curve reaches HMC's
+positivity (Montreal 8.9% vs 8.8%). The analysis and its decision criteria were specified
+before it was run.
+
+**Figure 7. Harmonising the noise floor is not a remedy.**
+(A) Published cut-offs, as recorded and with every night harmonised to a quiet-REM level of
+2.0 uV: harmonisation brings MGH and HMC together but lowers RBD sensitivity (Montreal 90%
+to 57%). (B) Cut-offs re-derived on harmonised CAP data (Youden's index, RBD vs same-system
+patients) and applied to harmonised MGH and HMC: share of external nights flagged, with 95%
+intervals from 2,000 bootstrap re-derivations, and leave-one-out sensitivity on CAP. The
+low re-derived thresholds reopen the difference between the hospitals.

@@ -123,7 +123,35 @@ could itself produce its higher positivity: white Gaussian noise (standard devia
 1.5 uV, seeded by record name) was added to the chin EMG of the first 300 MGH recordings
 in the database's record list, which raises the expected quiet-REM level from 0.59 uV
 to about 1.5 uV, HMC's median. Each noisy recording was compared with the same night as
-recorded.
+recorded (paired difference with a 95% Wald interval; exact McNemar test).
+
+*Noise ladder (pre-specified).* To turn this single comparison into a dose-response, and
+to measure what the noise floor does to sensitivity, CAP (every recording with a chin EMG
+in physical units), HMC (all) and the same 300 MGH recordings were streamed once more.
+Because band-pass filtering and heartbeat subtraction are linear, each night's chin EMG and
+one track of unit white noise (seeded by record name) were filtered once, and noisy copies
+were formed by adding the filtered noise scaled to an in-band RMS of 0.5, 1.0, 1.5, 2.0
+and 3.0 uV - the same noise draw at every level (common random numbers). Two further copies
+were *harmonised*: the added noise was chosen, by iteration, to bring the night's
+quiet-REM level to 1.5 and to 2.0 uV (within 1%); nights already above a target were left
+unchanged. Every copy was scored with every method. The criteria for interpreting this
+analysis - including when the noise floor would be judged to account for the site
+difference, and when harmonisation would be judged a working remedy - were written down
+and committed to the repository before it was run (Supplement S1).
+
+*Independent estimate of system noise.* In the same pass, the 40-90 Hz floor (5th
+percentile of 1-s RMS) of a central EEG channel (C4 or C3 against the contralateral
+mastoid) was measured in N2/N3 and in REM, as an estimate of each recording system's own
+noise obtained from a channel other than the chin.
+
+*Floor signature.* For every night, the ratio of the quietest N2/N3 chin level to the
+quietest REM chin level (5th percentiles of 1-s RMS) was computed. Where the floor is set
+by muscle tone, NREM tone rises above REM atonia (ratio > 1); where it is set by the
+recording's own noise, the two are indistinguishable (ratio near 1).
+
+*Transitional epochs.* Because laboratories differ most in how they place the boundaries
+of REM periods, all nights were re-scored without the first and last epoch of every REM
+period.
 
 ## 2.7 Reproducibility
 
