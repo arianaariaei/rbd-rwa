@@ -1,0 +1,164 @@
+"""Turn results/rwa_scores.csv into the paper's tables.
+
+    python run_report.py
+
+Prints (and writes to results/report.md):
+
+  T1  cohort description: nights scored, REM minutes, age and sex where known
+  T2  share of nights each method's published cut-off flags, per group, with
+      95% Wilson intervals - sensitivity in CAP's RBD patients, false-positive
+      rate everywhere else
+  T3  agreement between methods on the same nights (Cohen's kappa)
+  T4  what predicts a false positive in the MGH cohort: age, sex, apnea-
+      hypopnea index (logistic regression, one model per method)
+  T5  removing REM epochs that contain respiratory events or arousals
+  T6  positive predictive value of each method if used to screen a
+      population in which a given share has RBD
+
+Nights with less than MIN_REM minutes of REM are left out, as clinical
+scoring would.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import numpy as np
+import pandas as pd
+
+from src import config
+
+MIN_REM = 10.0
+DECIDING = ["Montreal", "SINBAR", "RAI"]          # methods with a published cut-off
+
+
+def wilson(k, n, z=1.96):
+    if n == 0:
+        return (np.nan, np.nan, np.nan)
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return p, max(0.0, c - h), min(1.0, c + h)
+
+
+def kappa(a, b):
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    po = np.mean(a == b)
+    pe = a.mean() * b.mean() + (1 - a.mean()) * (1 - b.mean())
+    return (po - pe) / (1 - pe) if pe < 1 else np.nan
+
+
+def groups(df):
+    """Label each night: CAP subgroups, and the external clinical cohorts."""
+    who = np.where(df.cohort == "cap", "CAP " + df.group.astype(str), df.cohort)
+    return df.assign(who=who)
+
+
+def main():
+    df = pd.read_csv(config.RESULTS / "rwa_scores.csv")
+    df = groups(df)
+    base = df[(df.excluded.fillna("") == "") & (df.rem_minutes >= MIN_REM)]
+    lines = []
+    say = lambda s="": (print(s), lines.append(s))
+
+    # T1 ─────────────────────────────────────────────────────────────────────
+    nights = base.drop_duplicates(["cohort", "record"])
+    say("T1  Nights scored (>= %.0f min REM)" % MIN_REM)
+    t1 = nights.groupby("who").agg(nights=("record", "count"),
+                                   rem_min_median=("rem_minutes", "median"),
+                                   age_mean=("age", "mean"),
+                                   male_pct=("sex", lambda s: 100 * (s == "M").mean()
+                                             if s.notna().any() else np.nan),
+                                   chin_fs=("chin_fs", "median"))
+    say(t1.round(1).to_string())
+    say()
+
+    # T2 ─────────────────────────────────────────────────────────────────────
+    say("T2  Share flagged POSITIVE by the published cut-off, % [95% CI]")
+    rows = []
+    for (band, meth, who), g in base[base.method.isin(DECIDING)].groupby(["band", "method", "who"]):
+        v = g.positive.dropna().map(lambda x: float(x in (True, "True", 1, 1.0)))
+        p, lo, hi = wilson(v.sum(), len(v))
+        rows.append(dict(band=band, method=meth, who=who, n=len(v),
+                         cell=f"{100 * p:.0f} [{100 * lo:.0f}-{100 * hi:.0f}]"))
+    t2 = pd.DataFrame(rows).pivot_table(index=["band", "method"], columns="who",
+                                        values="cell", aggfunc="first")
+    say(t2.to_string())
+    say()
+
+    # T3 ─────────────────────────────────────────────────────────────────────
+    say("T3  Agreement between methods on the same nights (Cohen's kappa, native band)")
+    nat = base[(base.band == "native") & base.method.isin(DECIDING)]
+    wide = nat.pivot_table(index=["who", "record"], columns="method", values="positive",
+                           aggfunc="first").dropna()
+    wide = wide.map(lambda x: float(x in (True, "True", 1, 1.0)))
+    for who, g in wide.groupby(level="who"):
+        pairs = [f"{a}-{b} {kappa(g[a], g[b]):.2f}" for i, a in enumerate(DECIDING)
+                 for b in DECIDING[i + 1:] if a in g and b in g]
+        disagree = (g.nunique(axis=1) > 1).mean() * 100
+        say(f"  {who:<16} n={len(g):<5} {'  '.join(pairs)}   methods disagree on {disagree:.0f}% of nights")
+    say()
+
+    # T4 ─────────────────────────────────────────────────────────────────────
+    mgh = base[(base.cohort == "chal18") & (base.band == "native") & base.method.isin(DECIDING)]
+    try:
+        import statsmodels.formula.api as smf
+    except ImportError:
+        smf = None
+        say("T4  skipped: statsmodels is not installed\n")
+    if smf is not None and len(mgh) and mgh.age.notna().any():
+        say("T4  What predicts a positive call in the MGH cohort (odds ratios [95% CI])")
+        for meth, g in mgh.groupby("method"):
+            g = g.dropna(subset=["positive", "age", "sex", "ahi"]).copy()
+            g["y"] = g.positive.map(lambda x: float(x in (True, "True", 1, 1.0)))
+            g["age10"] = g.age / 10.0
+            g["male"] = (g.sex == "M").astype(float)
+            g["ahi10"] = g.ahi / 10.0
+            if g.y.nunique() < 2:
+                say(f"  {meth}: all nights {'positive' if g.y.iloc[0] else 'negative'}")
+                continue
+            m = smf.logit("y ~ age10 + male + ahi10", data=g).fit(disp=False)
+            ci = np.exp(m.conf_int())
+            cells = [f"{k} {np.exp(m.params[k]):.2f} [{ci.loc[k, 0]:.2f}-{ci.loc[k, 1]:.2f}]"
+                     for k in ("age10", "male", "ahi10")]
+            say(f"  {meth:<9} n={len(g):<5} per 10 y: {cells[0].split(' ', 1)[1]}   "
+                f"male: {cells[1].split(' ', 1)[1]}   per 10 AHI: {cells[2].split(' ', 1)[1]}")
+        say()
+
+    # T5 ─────────────────────────────────────────────────────────────────────
+    ev = df[(df.cohort == "chal18") & (df.band == "native") & df.method.isin(DECIDING)
+            & (df.rem_minutes >= MIN_REM)]
+    if len(ev) and (ev.excluded.fillna("") != "").any():
+        say("T5  Excluding REM epochs with respiratory events or arousals (MGH), % positive")
+        w = ev.pivot_table(index=["record", "method"], columns=ev.excluded.fillna(""),
+                           values="positive", aggfunc="first").dropna()
+        w = w.map(lambda x: float(x in (True, "True", 1, 1.0)))
+        for meth, g in w.groupby(level="method"):
+            a, b = g.iloc[:, 0], g.iloc[:, 1]
+            say(f"  {meth:<9} all REM {100 * a.mean():.0f}%  ->  event-free REM {100 * b.mean():.0f}%  "
+                f"(changed on {100 * (a != b).mean():.0f}% of nights)")
+        say()
+
+    # T6 ─────────────────────────────────────────────────────────────────────
+    say("T6  Screening: positive predictive value at a given RBD prevalence")
+    say("    sensitivity from CAP RBD; specificity from the pooled external cohorts")
+    for meth in DECIDING:
+        g = base[(base.band == "native") & (base.method == meth)]
+        y = lambda s: s.dropna().map(lambda x: float(x in (True, "True", 1, 1.0)))
+        sens = y(g[g.who == "CAP RBD"].positive)
+        spec = 1 - y(g[g.cohort.isin(["chal18", "hmc"])].positive)
+        if len(sens) == 0 or len(spec) == 0:
+            continue
+        se, sp = sens.mean(), spec.mean()
+        ppv = [se * p / (se * p + (1 - sp) * (1 - p)) for p in (0.01, 0.02, 0.05, 0.10)]
+        say(f"  {meth:<9} sens {100 * se:.0f}%  spec {100 * sp:.0f}%   PPV at 1/2/5/10% prevalence: "
+            + " / ".join(f"{100 * v:.0f}%" for v in ppv))
+
+    out = config.RESULTS / "report.md"
+    out.write_text("```\n" + "\n".join(lines) + "\n```\n", encoding="utf-8")
+    print(f"\nwritten -> {out}")
+
+
+if __name__ == "__main__":
+    main()
