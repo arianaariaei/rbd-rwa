@@ -168,33 +168,101 @@ METHODS = {
 }
 
 
-def score_night(env, env_fs, hypnogram, epoch_sec, method: Method, unit_known=True):
-    """Apply one method to one night's chin RMS envelope."""
-    out = {"method": method.name}
-    rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env))
-    out["rem_minutes"] = round(float(rem.sum()) / env_fs / 60, 1)
-    if rem.sum() < env_fs * 60:
+# ══════════════════════════════════════════════════════════════════════════════
+#  SCORING A NIGHT (from a pack: REM epochs at full resolution, see pack.py)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# band -> (RMS row, mean-rectified row) of the pack
+BANDS = {"native": ("rms", "mav"), "harmonized": ("rms_h", "mav_h"),
+         "native_with_ecg": ("rms_with_ecg", None)}
+
+
+def _select(pack, band, exclude=()):
+    """REM epoch numbers and (n_epochs, bins) arrays for a band, minus any
+    REM epoch carrying one of the `exclude` flags."""
+    rows = pack["meta"]["rows"]
+    rk, mk = BANDS[band]
+    ep = pack["rem_epochs"]
+    keep = np.ones(len(ep), bool)
+    for name in exclude or ():
+        flag = pack["epoch_flags"].get(name)
+        if flag is not None and len(ep):
+            keep &= flag[ep] == 0
+    rms = pack["rem"][rows.index(rk)][keep] if rk in rows else None
+    mav = pack["rem"][rows.index(mk)][keep] if mk in rows else None
+    nrem = pack["nrem_1s"][rows.index(rk)] if (rk in rows and pack["nrem_1s"].size) \
+        else np.empty(0)
+    return ep[keep], rms, mav, nrem
+
+
+def _segments(ep):
+    """(start, stop) positions of runs of consecutive epoch numbers."""
+    if len(ep) == 0:
+        return []
+    brk = np.flatnonzero(np.diff(ep) != 1) + 1
+    return list(zip(np.r_[0, brk], np.r_[brk, len(ep)]))
+
+
+def _runs(rem2d, ep, env_fs, thr, min_s, max_s):
+    """runs_above within each stretch of consecutive REM epochs, so that a
+    burst never bridges the gap between two separate REM periods."""
+    out = np.zeros(rem2d.shape, bool)
+    for a, b in _segments(ep):
+        out[a:b] = runs_above(rem2d[a:b].reshape(-1), env_fs, thr, min_s,
+                              max_s).reshape(b - a, -1)
+    return out
+
+
+def _background(rem2d, nrem_1s, env_fs, how):
+    """Background from 1 s RMS values of REM or of N2/N3 (see baseline_amplitude)."""
+    if how.endswith("nrem"):
+        vals = nrem_1s
+    else:
+        vals, _ = mini_epoch_rms(rem2d.reshape(-1), env_fs, 1.0)
+    if len(vals) < 10:
+        return np.nan
+    return float(vals.min() if how.startswith("min") else np.percentile(vals, 5))
+
+
+def _mini(mask2d, env_fs, seconds):
+    """Split concatenated REM into mini-epochs; True where any sample is."""
+    flat = mask2d.reshape(-1)
+    w = int(round(env_fs * seconds))
+    n = len(flat) // w
+    return flat[: n * w].reshape(n, w)
+
+
+def score_night(pack, method: Method, band="native", exclude=()):
+    """Apply one method to one night. Returns a dict of its measures."""
+    meta = pack["meta"]
+    env_fs, epoch_sec = meta["env_fs"], meta["epoch_sec"]
+    ep, env, _, nrem = _select(pack, band, exclude)
+    out = {"method": method.name,
+           "rem_minutes": round(len(ep) * epoch_sec / 60.0, 1)}
+    if env is None:
+        out["error"] = f"band {band} not stored"
+        return out
+    if len(ep) < 2:
         out["error"] = "less than one minute of REM"
         return out
 
-    # ── tonic ────────────────────────────────────────────────────────────────
-    bt = baseline_amplitude(env, env_fs, hypnogram, epoch_sec, method.tonic_baseline)
-    bp = baseline_amplitude(env, env_fs, hypnogram, epoch_sec, method.phasic_baseline)
+    bt = _background(env, nrem, env_fs, method.tonic_baseline)
+    bp = _background(env, nrem, env_fs, method.phasic_baseline)
     if not (np.isfinite(bt) and bt > 0 and np.isfinite(bp) and bp > 0):
         out["error"] = "background could not be estimated"
         return out
+
+    # ── tonic ────────────────────────────────────────────────────────────────
     thr_t = method.tonic_mult * bt
-    if method.tonic_abs_uv is not None and unit_known:
+    if method.tonic_abs_uv is not None and meta.get("unit_known", True):
         thr_t = min(thr_t, method.tonic_abs_uv)      # "2x background OR > 10 uV"
-    idx = np.flatnonzero(rem)
-    tb = _blocks(idx, int(round(env_fs * method.tonic_epoch_s)))
-    tonic = (env[tb] > thr_t).mean(axis=1) > 0.5 if len(tb) else np.empty(0, bool)
+    above = _mini(env > thr_t, env_fs, method.tonic_epoch_s)
+    tonic = above.mean(axis=1) > 0.5
 
     # ── phasic ───────────────────────────────────────────────────────────────
     thr_p = method.phasic_mult * bp
-    burst = runs_above(env, env_fs, thr_p, 0.1, method.phasic_max_s)
-    pb = _blocks(idx, int(round(env_fs * method.phasic_mini_s)))
-    phasic = burst[pb].any(axis=1) if len(pb) else np.empty(0, bool)
+    burst = _runs(env, ep, env_fs, thr_p, 0.1, method.phasic_max_s)
+    phasic = _mini(burst, env_fs, method.phasic_mini_s).any(axis=1)
 
     out.update(background_tonic_uV=round(bt, 3), background_phasic_uV=round(bp, 3),
                tonic_threshold_uV=round(thr_t, 3), phasic_threshold_uV=round(thr_p, 3),
@@ -203,23 +271,17 @@ def score_night(env, env_fs, hypnogram, epoch_sec, method: Method, unit_known=Tr
 
     # ── AASM: an epoch is phasic when >= 5 of its ten 3 s mini-epochs are ──
     if method.phasic_epoch_rule:
-        per = int(round(env_fs * epoch_sec))
         w = int(round(env_fs * method.phasic_mini_s))
-        hits = []
-        for i, code in enumerate(hypnogram):
-            if code != REM_CODE or (i + 1) * per > len(env):
-                continue
-            seg = burst[i * per:(i + 1) * per]
-            hits.append(seg[: (per // w) * w].reshape(-1, w).any(axis=1).sum()
-                        >= method.phasic_epoch_rule)
-        out["phasic_epoch_pct"] = round(100.0 * np.mean(hits), 2) if hits else np.nan
+        per = burst.shape[1]
+        minis = burst[:, : (per // w) * w].reshape(len(burst), -1, w).any(axis=2)
+        hits = minis.sum(axis=1) >= method.phasic_epoch_rule
+        out["phasic_epoch_pct"] = round(100.0 * hits.mean(), 2)
 
     # ── SINBAR "any": tonic, phasic or both, above the same amplitude ──────
     if method.any_mini_s:
-        active = runs_above(env, env_fs, method.any_mult * bp, 0.1, None)
-        ab = _blocks(idx, int(round(env_fs * method.any_mini_s)))
-        out["any_pct"] = round(100.0 * active[ab].any(axis=1).mean(), 2) \
-            if len(ab) else np.nan
+        active = _runs(env, ep, env_fs, method.any_mult * bp, 0.1, None)
+        out["any_pct"] = round(100.0 * _mini(active, env_fs, method.any_mini_s)
+                               .any(axis=1).mean(), 2)
 
     hits = [out.get(k, np.nan) >= v for k, v in method.cutoffs.items()
             if np.isfinite(out.get(k, np.nan))]
@@ -227,7 +289,7 @@ def score_night(env, env_fs, hypnogram, epoch_sec, method: Method, unit_known=Tr
     return out
 
 
-def rem_atonia_index(env_mav, env_fs, hypnogram, epoch_sec, bin_width=1.0,
+def rem_atonia_index(pack, band="native", exclude=(), bin_width=1.0,
                      n_bins=20, noise="moving_min", window_s=60):
     """
     REM Atonia Index. Average rectified amplitude per 1 s mini-epoch of REM,
@@ -236,17 +298,22 @@ def rem_atonia_index(env_mav, env_fs, hypnogram, epoch_sec, bin_width=1.0,
         RAI = A0 / (1 - A1)
 
     with A0 the fraction of mini-epochs <= 1 uV and A1 the fraction in
-    (1, 2] uV. Runs from 0 (no atonia) to 1 (complete atonia). `env_mav` must
-    be a MEAN-RECTIFIED envelope in microvolts, because the bins are absolute.
+    (1, 2] uV. Runs from 0 (no atonia) to 1 (complete atonia). Uses the
+    MEAN-RECTIFIED rows, which must be in microvolts: the bins are absolute.
 
     noise = "moving_min": subtract the minimum of the `window_s` mini-epochs
             surrounding each one (Ferri et al. 2010, "improved" RAI);
             "global_min": subtract the night's single minimum (2008 version).
     """
-    rem = stage_mask_at(env_fs, hypnogram, epoch_sec, (REM_CODE,), len(env_mav))
-    if rem.sum() < env_fs * 60:
+    meta = pack["meta"]
+    ep, _, env_mav, _ = _select(pack, band, exclude)
+    if env_mav is None:
+        return {"method": "RAI", "error": f"no mean-rectified row for band {band}"}
+    if not meta.get("unit_known", True):
+        return {"method": "RAI", "error": "chin EMG has no physical units"}
+    if len(ep) < 2:
         return {"method": "RAI", "error": "less than one minute of REM"}
-    amp, _ = mini_epoch_rms(env_mav[rem], env_fs, 1.0, how="mean")
+    amp, _ = mini_epoch_rms(env_mav.reshape(-1), meta["env_fs"], 1.0, how="mean")
     if noise == "moving_min":
         from scipy.ndimage import minimum_filter1d
         amp = amp - minimum_filter1d(amp, size=int(window_s), mode="nearest")
@@ -261,34 +328,23 @@ def rem_atonia_index(env_mav, env_fs, hypnogram, epoch_sec, bin_width=1.0,
         "method": "RAI",
         "rai": round(rai, 4),
         "frac_silent": round(a0, 4),
-        "rem_minutes": round(float(rem.sum()) / env_fs / 60, 1),
+        "rem_minutes": round(len(ep) * meta["epoch_sec"] / 60.0, 1),
         "positive": bool(rai < 0.8) if np.isfinite(rai) else None,
     }
 
 
-def score_all(d, band="native"):
+def score_all(pack, band="native", exclude=()):
     """
-    Run every method on one derived recording (the dict from load_derived).
+    Run every method on one night (a pack; see pack.py).
     band = "native" uses each recording's own EMG band; "harmonized" uses the
     common 10-45 Hz band, the fair choice when comparing ACROSS recordings made
-    on different equipment.
+    on different equipment; "native_with_ecg" leaves the heartbeat in.
+    exclude = epoch-flag names (e.g. "resp", "arousal") whose REM epochs are
+    dropped before scoring.
     """
-    meta = d["meta"]
-    env_fs, epoch_sec, hyp = meta["env_fs"], meta["epoch_sec"], d["hypnogram"]
-    if band == "native_with_ecg":            # heartbeat left in: a sensitivity check
-        chin_rms, chin_mav = d["chin_rms_with_ecg"], None
-    else:
-        sfx = "" if band == "native" else "_h"
-        chin_rms, chin_mav = d[f"chin_rms{sfx}"], d[f"chin_mav{sfx}"]
-    unit_known = meta["chin_info"]["unit_known"]
-    rows = [score_night(chin_rms, env_fs, hyp, epoch_sec, m, unit_known)
-            for m in METHODS.values()]
-    if chin_mav is None:
-        rows.append({"method": "RAI", "error": "not computed for this band"})
-    elif unit_known:
-        rows.append(rem_atonia_index(chin_mav, env_fs, hyp, epoch_sec))
-    else:
-        rows.append({"method": "RAI", "error": "chin EMG has no physical units"})
+    rows = [score_night(pack, m, band, exclude) for m in METHODS.values()]
+    rows.append(rem_atonia_index(pack, band, exclude))
     for r in rows:
         r["band"] = band
+        r["excluded"] = "+".join(exclude) if exclude else ""
     return rows

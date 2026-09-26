@@ -1,17 +1,16 @@
-"""Score every derived recording with every RWA method.
+"""Score every pack of every cohort with every RWA method.
 
-Writes one tidy row per (recording, method, band) to
-results/cap_rwa_scores.csv, then prints, for every metric, the median in each
-cohort and how well it separates RBD from two comparison groups (AUC, 0.5 =
-chance):
+Reads DURABLE/packs/<cohort>/*.npz (build them with run_cohort.py), writes one
+tidy row per (recording, method, band, exclusion) to results/rwa_scores.csv,
+and prints three summaries:
 
-  healthy        CAP's healthy sleepers. CAUTION: most were recorded on
-                 different equipment from the RBD patients (chin EMG sampled
-                 at 100-200 Hz, some without physical units), so amplitude
-                 differences are partly hardware differences.
-  same-system    other CAP patients (epilepsy, PLM, insomnia, narcolepsy...)
-                 whose chin EMG was recorded like the RBD patients' (512 Hz,
-                 microvolts). The fairer comparison.
+  1. RBD separation within CAP (AUC, 0.5 = chance), against CAP's healthy
+     sleepers - most of whom were recorded on different equipment, so partly
+     a hardware contrast - and against CAP patients recorded on the same
+     system as the RBD group (512 Hz, microvolts), the fair comparison.
+  2. How many people WITHOUT known RBD each method's published cut-off flags,
+     per cohort: the false-positive burden a screening programme would face.
+  3. The spread of each metric per cohort (median, 90th, 95th percentile).
 
     python run_score.py
 """
@@ -24,17 +23,19 @@ import numpy as np
 import pandas as pd
 
 from src import config
-from src.extract import load_derived
+from src.pack import load_pack
 from src.rwa import score_all
 
-COHORT_NAMES = {"rbd": "RBD", "n": "healthy", "nfle": "NFLE", "plm": "PLM",
-                "ins": "insomnia", "narco": "narcolepsy", "sdb": "SDB",
-                "brux": "bruxism"}
+CAP_GROUPS = {"rbd": "RBD", "n": "healthy", "nfle": "NFLE", "plm": "PLM",
+              "ins": "insomnia", "narco": "narcolepsy", "sdb": "SDB", "brux": "bruxism"}
 METRICS = ["tonic_pct", "phasic_pct", "phasic_epoch_pct", "any_pct", "atonia_loss"]
+MIN_REM_MIN = 10.0     # nights with less REM than this are not scored in summaries
 
 
-def cohort_of(record):
-    return COHORT_NAMES.get("".join(c for c in record if not c.isdigit()), "other")
+def group_of(cohort, record):
+    if cohort == "cap":
+        return CAP_GROUPS.get("".join(c for c in record if not c.isdigit()), "other")
+    return "clinical"
 
 
 def auc(pos, neg):
@@ -47,51 +48,88 @@ def auc(pos, neg):
     return float(((diff > 0) + 0.5 * (diff == 0)).mean()), len(pos), len(neg)
 
 
-def main():
-    files = sorted(p for p in config.DERIVED.glob("*.npz") if ".tmp" not in p.name)
-    print(f"{len(files)} derived recordings in {config.DERIVED}\n")
+def score_everything():
     rows = []
-    for p in files:
-        d = load_derived(p)
-        meta = d["meta"]
-        ci = meta["chin_info"]
-        for band in ("native", "harmonized", "native_with_ecg"):
-            for r in score_all(d, band=band):
-                r.update(record=meta["record"], cohort=cohort_of(meta["record"]),
-                         chin_fs=ci["fs"], chin_label=ci["label"],
-                         unit_known=ci["unit_known"], n_legs=len(meta["leg_info"]))
-                rows.append(r)
+    for cohort_dir in sorted((config.DURABLE / "packs").glob("*")):
+        files = sorted(p for p in cohort_dir.glob("*.npz") if ".tmp" not in p.name)
+        print(f"{cohort_dir.name}: {len(files)} packs", flush=True)
+        for p in files:
+            pack = load_pack(p)
+            m = pack["meta"]
+            cohort = m.get("cohort", cohort_dir.name)
+            info = dict(cohort=cohort, record=m["record"], group=group_of(cohort, m["record"]),
+                        age=m.get("age"), sex=m.get("sex"), ahi=m.get("ahi"),
+                        chin_fs=m.get("chin_fs", m.get("chin_info", {}).get("fs")),
+                        unit_known=m.get("unit_known", True))
+            exclusions = [()] + ([("resp", "arousal")] if pack["epoch_flags"] else [])
+            for band in ("native", "harmonized"):
+                for ex in exclusions:
+                    for r in score_all(pack, band, ex):
+                        rows.append({**info, **r})
     df = pd.DataFrame(rows)
     if "rai" in df:
         df["atonia_loss"] = 1 - df["rai"]              # higher = more RWA, like the rest
-    out = config.RESULTS / "cap_rwa_scores.csv"
-    df.to_csv(out, index=False)
-    print(f"saved {len(df)} rows -> {out}\n")
+    return df
 
-    same_system = (df.chin_fs == 512) & df.unit_known.astype(bool)
-    order = [c for c in COHORT_NAMES.values() if c in set(df["cohort"])]
-    for band, g in df.groupby("band"):
-        print(f"=== {band} band " + "=" * 60)
-        print(f"{'method':<9} {'metric':<17} " + " ".join(f"{c[:8]:>8}" for c in order)
-              + f" | {'AUC v healthy':>14} {'AUC v same-sys':>15}")
-        for m, gm in g.groupby("method", sort=False):
-            ss = same_system.loc[gm.index]
+
+def main():
+    df = score_everything()
+    out = config.RESULTS / "rwa_scores.csv"
+    df.to_csv(out, index=False)
+    print(f"\nsaved {len(df)} rows -> {out}\n")
+    base = df[(df.excluded == "") & (df.rem_minutes >= MIN_REM_MIN)]
+
+    # 1. RBD separation within CAP ────────────────────────────────────────────
+    cap = base[base.cohort == "cap"]
+    if len(cap):
+        same = (cap.chin_fs == 512) & cap.unit_known.astype(bool)
+        print("1. RBD separation in CAP (AUC)           vs healthy      vs same-system patients")
+        for (band, meth), g in cap.groupby(["band", "method"], sort=False):
             for metric in METRICS:
-                if metric not in gm or gm[metric].notna().sum() == 0:
+                if metric not in g or g[metric].notna().sum() == 0:
                     continue
-                med = gm.groupby("cohort")[metric].median()
-                a1, n1, h1 = auc(gm.loc[gm.cohort == "RBD", metric],
-                                 gm.loc[gm.cohort == "healthy", metric])
-                a2, n2, h2 = auc(gm.loc[ss & (gm.cohort == "RBD"), metric],
-                                 gm.loc[ss & ~gm.cohort.isin(["RBD", "healthy"]), metric])
-                print(f"{m:<9} {metric:<17} "
-                      + " ".join(f"{med.get(c, np.nan):>8.2f}" for c in order)
-                      + f" | {a1:>6.3f} ({n1}v{h1}) {a2:>7.3f} ({n2}v{h2})")
-        pos = g.dropna(subset=["positive"]).pivot_table(
-            index="method", columns="cohort", values="positive", aggfunc="mean")
-        print("\nshare classified POSITIVE by each method's published cut-off:")
-        print((100 * pos.reindex(columns=order)).round(0).to_string())
+                s = same.loc[g.index]
+                a1, n1, h1 = auc(g.loc[g.group == "RBD", metric], g.loc[g.group == "healthy", metric])
+                a2, n2, h2 = auc(g.loc[s & (g.group == "RBD"), metric],
+                                 g.loc[s & ~g.group.isin(["RBD", "healthy"]), metric])
+                print(f"   {band:<10} {meth:<9} {metric:<17} {a1:6.3f} ({n1}v{h1:<3})   "
+                      f"{a2:6.3f} ({n2}v{h2})")
         print()
+
+    # 2. Share flagged positive by published cut-offs ─────────────────────────
+    lab = base.assign(who=np.where(base.cohort == "cap", "CAP " + base.group, base.cohort))
+    pos = lab.dropna(subset=["positive"])
+    pos = pos.assign(positive=pos.positive.astype(float))
+    tab = pos.pivot_table(index=["band", "method"], columns="who", values="positive",
+                          aggfunc="mean")
+    n = pos.groupby("who").record.nunique()
+    print("2. Share classified POSITIVE by each published cut-off (%), nights with >= "
+          f"{MIN_REM_MIN:.0f} min REM")
+    print("   n per group: " + ", ".join(f"{k} {v}" for k, v in n.items()))
+    print((100 * tab).round(1).to_string())
+    print()
+
+    # 3. Distribution of each metric per cohort ────────────────────────────────
+    print("3. Metric distribution per group (native band): median / p90 / p95")
+    nat = lab[lab.band == "native"]
+    for meth, g in nat.groupby("method", sort=False):
+        for metric in METRICS:
+            if metric not in g or g[metric].notna().sum() == 0:
+                continue
+            q = g.groupby("who")[metric].quantile([0.5, 0.9, 0.95]).unstack()
+            cells = "  ".join(f"{w}: {r[0.5]:.1f}/{r[0.9]:.1f}/{r[0.95]:.1f}"
+                              for w, r in q.iterrows())
+            print(f"   {meth:<9} {metric:<17} {cells}")
+
+    # 4. Respiratory events and arousals (cohorts that annotate them) ─────────
+    ev = df[df.cohort == "chal18"]
+    if len(ev) and (ev.excluded != "").any():
+        print("\n4. Effect of removing REM epochs with respiratory events or arousals "
+              "(chal18, native band, share positive %)")
+        e = ev[(ev.band == "native") & (ev.rem_minutes >= MIN_REM_MIN)].dropna(subset=["positive"])
+        print((100 * e.assign(positive=e.positive.astype(float))
+               .pivot_table(index="method", columns="excluded", values="positive",
+                            aggfunc="mean")).round(1).to_string())
 
 
 if __name__ == "__main__":
