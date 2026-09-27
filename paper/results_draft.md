@@ -203,3 +203,40 @@ older patients without RBD were flagged more often: 44% against 29% by the Montr
 19% against 11% by the RAI, and 62% against 37% by SINBAR-FC (T17, FC9). False-positive
 rates estimated from CAP's young controls are therefore optimistic; the external clinical
 cohorts (mean age 55 in MGH) are the better guide.
+
+## 3.13 Recording systems not used so far (pre-specified external test)
+
+Three further open cohorts, recorded on three further systems, were processed after the
+predictions had been committed (Methods 2.8; Fig. 9). BOAS - 99 adults from the general
+population, without psychotropic medication - was recorded on the quietest system in the
+study (median floor 0.37 uV [0.28-0.49]). On it, the published criteria flagged most healthy
+volunteers: SINBAR 91% [84-95] and Montreal 41% [32-51] (96% and 58% in those aged 50 or
+over). This was not heartbeat artefact: BOAS has no ECG channel, but in the 80 nights whose
+REM envelope repeated at the heart rate no more than MGH's after removal, positivity was the
+same (SINBAR 92%, Montreal 44%); in the cohorts with ECG, leaving the heartbeat in changed
+the published rules by at most 7 points. Floor-corrected, BOAS positivity fell to 35% [27-45]
+(SINBAR) and 15% [9-24] (Montreal). The 25 healthy volunteers of DOD-H, recorded on a Siesta
+system with a floor of 0.56 uV [0.54-0.65], were flagged at 84% [65-94] (SINBAR) and 20%
+[9-39] (Montreal), and floor-corrected at 32% [17-52] and 12% [4-30] (E2). Between the two
+healthy cohorts, whose floors differed by a factor of 1.5, the published Montreal criteria
+differed by 21.4 points and SINBAR by 6.9; floor-corrected, by 3.2 and 3.4 (E3).
+
+DOD-O - 53 sleep-clinic patients at Stanford, recorded with a Somno HD system at a floor of
+0.82 uV [0.76-0.92] - fell where MGH's noise ladder predicted for that floor, although neither
+its patients nor its system had been used to draw it (E6): the published Montreal criteria
+flagged 30% [20-44] against 21% predicted and SINBAR 59% [45-71] against 62%. Its muscle
+activity, once noise was removed, was on MGH's scale (net N2/N3 1.68 uV; E1), and the
+SINBAR-FC cut-off re-derived on CAP flagged 17% [9-29] of its patients, against 13-14% at MGH
+and HMC (E5).
+
+Across the six groups without RBD, published positivity fell with the median floor of the
+cohort (Spearman rho -0.83 for SINBAR, -0.77 for Montreal); under floor correction the
+relation reversed weakly (+0.43, +0.31; E4), leaving the population - healthy volunteers at
+32-35% (SINBAR-FC), patients at 43-51% - rather than the recording system to order the
+groups (Fig. 9). Two predictions were narrowly missed. The healthy cohorts registered less
+muscle activity than the patient cohorts once noise was removed (net N2/N3 1.04 and
+1.05 uV, 0.65 and 0.66 times MGH's, against the 0.67 set in advance; E1); because two
+different systems gave the same value, this more likely reflects their population than their
+gain. And the SINBAR-FC cut-off re-derived on CAP flagged 11% [6-19] of BOAS and 12% [4-30] of
+DOD-H nights, above the 10% set in advance (E5). Eight of the twelve pre-specified checks
+were met.

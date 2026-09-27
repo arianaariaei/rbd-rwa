@@ -76,6 +76,29 @@ close to the original (33.0% vs 32%) [Joza 2025]. Whether such differences refle
 populations or equipment cannot be decided unless studies report the floor against which
 their thresholds were measured.
 
+## On systems not used to find the effect
+
+The external cohorts turned the mechanism into a prediction about people who should not be
+flagged at all. On the quietest recording system in the study, BOAS's Micromed (floor
+0.37 uV), the published SINBAR chin criterion flagged 91% of healthy volunteers from the
+general population, and the Montreal criteria 41% - exactly what a threshold set at twice a
+very low noise floor predicts, and not an artefact of the heartbeat that system could not
+remove. A second healthy cohort, on a different and somewhat noisier system, was flagged at
+84% and 20%. Floor correction brought the two healthy cohorts together (a 21-point
+difference under the Montreal criteria became 3 points) and, across all six groups without
+RBD, removed the dependence of positivity on the floor of the recording system (Spearman rho
+-0.83 published, +0.43 corrected), leaving healthy volunteers below patients, as they
+should be. The mechanism also predicted numbers, not only directions: DOD-O's sleep-clinic
+patients at Stanford, on a system not used before, were flagged within 10 points of what
+MGH's noise ladder predicted for their floor. Four of the twelve checks were narrowly
+missed - the healthy cohorts' lower muscle tone (0.65 times MGH's, against the 0.67 we had
+set) and 11-12% of healthy nights above the re-derived SINBAR-FC cut-off (against 10%) -
+and these belong in the paper as they are: the re-derived cut-off is about 88% specific in
+healthy adults, not 90%. Together, three new systems reproduced the central claim, that the
+published criteria measure the recording system as much as the patient, more strikingly
+than the cohorts in which it was found: nine in ten healthy volunteers on a quiet system
+would meet the published SINBAR chin criterion for RBD.
+
 ## Background is an undocumented free parameter
 
 Visual scorers judge background EMG by eye; an automated method must turn it into a

@@ -27,7 +27,7 @@ in the clinical cohorts. Status: done / partial / TO DO.
 | 16 | Handling of missing data | TO DO: missing ECG (no heartbeat removal), missing units (absolute criteria skipped), missing demographics (HMC) |
 | 17 | Analyses of variability, pre-specified vs exploratory | Methods 2.6 - done; label background and boundary analyses as exploratory, ladder as pre-specified |
 | 18 | Intended sample size and how determined | TO DO: state that all available open data were used; report precision instead |
-| 19 | Participant flow diagram | TO DO: 1,252 recordings -> exclusions (no chin EMG, < 10 min REM, withdrawn) -> 1,177 scored |
+| 19 | Participant flow diagram | TO DO (counts available): development cohorts 1,253 recordings -> 1 no chin EMG, 75 < 10 min REM, 3 withdrawn (HMC) -> 1,177; external BOAS 128 nights/100 participants -> 100 first nights -> 1 < 10 min REM -> 99; DOD-O 56 -> 1 unscored -> 55 -> 2 < 10 min REM -> 53; DOD-H 25 -> 25 |
 | 20 | Baseline characteristics | T1 - done incl. CAP ages (gender-age.xlsx); add HMC aggregate demographics from the database description |
 | 21a | Severity distribution in those with the target condition | partial: CAP gives no severity; established clinical RBD (spectrum bias) - report RWA metric distribution (F2f) and age (T17) |
 | 21b | Alternative diagnoses in those without | T1/T2 - done for CAP groups; MGH/HMC unspecified |
@@ -37,6 +37,6 @@ in the clinical cohorts. Status: done / partial / TO DO.
 | 25 | Adverse events | not applicable (secondary analysis) |
 | 26 | Limitations | Discussion - done |
 | 27 | Implications for practice | Discussion/Conclusion - done |
-| 28 | Registration | not registered; noise ladder (commit 6d3cc6b) and floor-corrected criteria (commit 20b9ec2) pre-specified in the repository |
-| 29 | Protocol access | repository: paper/preregistration_noise_ladder.md, paper/preregistration_floor_corrected.md, code, notebook |
+| 28 | Registration | not registered; noise ladder (6d3cc6b), floor-corrected criteria (20b9ec2) and external cohorts (48053f3) pre-specified in the repository |
+| 29 | Protocol access | repository: paper/preregistration_noise_ladder.md, preregistration_floor_corrected.md, preregistration_external.md, code, notebook |
 | 30 | Funding | TO DO: state "no funding" |

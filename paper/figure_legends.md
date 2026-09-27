@@ -71,3 +71,12 @@ exceeds about 2 uV, where small activity can no longer be told from noise. (C) A
 share flagged by the published (plain) and floor-corrected (hatched) Montreal and SINBAR
 criteria. The floor-corrected criteria close the MGH-HMC gap (Montreal +20.5 to +1.6
 points; SINBAR +51.0 to +2.4).
+
+**Figure 9. Recording systems not used to find the effect (pre-specified external test).**
+Share of nights flagged by the published (open symbols) and floor-corrected (filled; arrows
+from published to corrected) SINBAR (A) and Montreal (B) criteria, plotted against each
+cohort's median quiet-REM level. Circles, patients (CAP same-system patients, MGH, HMC,
+DOD-O); squares, healthy volunteers (BOAS, first night per participant; DOD-H); star, CAP RBD.
+On quiet systems the published criteria flag most healthy volunteers (SINBAR: BOAS 91%, DOD-H
+84%); floor correction removes the dependence on the recording's floor and leaves the
+population to order the groups.
