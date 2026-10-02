@@ -127,10 +127,11 @@ def main():
         done = set(zip(old.record, old.step))
     todo = {r: [s for s in steps if (r, s) not in done] for r in recs}
     todo = {r: s for r, s in todo.items() if s}
+    n_done = len(recs) - len(todo)
     if args.limit:
         todo = dict(list(todo.items())[: args.limit])
-    print(f"{args.cohort}: {len(recs)} nights, {len(recs) - len(todo)} fully scored, "
-          f"{len(todo)} to score at steps {steps} with {args.workers} workers", flush=True)
+    print(f"{args.cohort}: {len(recs)} nights, {n_done} fully scored, "
+          f"{len(todo)} to score now at steps {steps} with {args.workers} workers", flush=True)
     t_start = time.time()
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
         futs = [ex.submit(_work, args.cohort, r, s, str(config.SCRATCH)) for r, s in todo.items()]

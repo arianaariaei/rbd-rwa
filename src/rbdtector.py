@@ -78,7 +78,22 @@ def noise_ratio(fs=256.0, minutes=10.0, n=20, seed=0):
 
 def _patch():
     """Wrap RBDtector's baseline finder: record the baseline, and replace it by
-    half the floor-corrected threshold when the variant is 'FC'."""
+    half the floor-corrected threshold when the variant is 'FC'. Also give
+    pyedflib's signal headers the key RBDtector (2022) reads: pyedflib has since
+    renamed 'sample_rate' to 'sample_frequency' (an I/O shim; detection unchanged)."""
+    from pyedflib import highlevel
+    if not getattr(highlevel, "_rwa_patched", False):
+        read_edf = highlevel.read_edf
+
+        def read_edf_with_rate(*args, **kwargs):
+            signals, headers, header = read_edf(*args, **kwargs)
+            for h in headers:
+                if "sample_rate" not in h and "sample_frequency" in h:
+                    h["sample_rate"] = h["sample_frequency"]
+            return signals, headers, header
+
+        highlevel.read_edf = read_edf_with_rate
+        highlevel._rwa_patched = True
     from app_logic.PSG import PSG
     if getattr(PSG, "_rwa_patched", False):
         return
@@ -115,9 +130,13 @@ def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30):
     n_sec = len(x_uv) // fs
     n_ep = min(len(hypnogram), n_sec // epoch_s)
     x = np.clip(np.asarray(x_uv[: n_ep * epoch_s * fs], dtype=np.float64), -PHYS_UV, PHYS_UV)
-    sh = highlevel.make_signal_header("EMG", dimension="uV", sample_frequency=fs,
-                                      physical_min=-PHYS_UV, physical_max=PHYS_UV,
-                                      digital_min=-32768, digital_max=32767)
+    # pyEDFlib 0.1.22 calls the rate 'sample_rate', later versions 'sample_frequency'
+    import inspect
+    rate = "sample_frequency" if "sample_frequency" in \
+        inspect.signature(highlevel.make_signal_header).parameters else "sample_rate"
+    sh = highlevel.make_signal_header("EMG", dimension="uV", physical_min=-PHYS_UV,
+                                      physical_max=PHYS_UV, digital_min=-32768,
+                                      digital_max=32767, **{rate: fs})
     hdr = highlevel.make_header(startdate=START)
     highlevel.write_edf(str(folder / "night.edf"), [x], [sh], hdr,
                         file_type=pyedflib.FILETYPE_EDFPLUS)
