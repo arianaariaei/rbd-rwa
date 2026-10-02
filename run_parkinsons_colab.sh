@@ -31,6 +31,9 @@ fi
 RB="$E/bin/python run_rbdtector.py --out $O --mirror $D/results"
 if [ "$PART" != 2 ]; then
   $RB --cohort cap
+  # exploratory, added after PD2b was missed: RBDtector on noise alone (~10 minutes)
+  if [ ! -f "$R/rbdtector_noise.csv" ]; then $E/bin/python run_rbdtector_noise.py; fi
+  cp "$R/rbdtector_noise.csv" "$D/results/"
 fi
 if [ "$PART" != 1 ]; then
   $RB --cohort chal18 --sample 100

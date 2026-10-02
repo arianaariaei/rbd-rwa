@@ -23,7 +23,7 @@ FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fe
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
          "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py", "run_external.py",
          "src/rbdtector.py", "src/floorcheck.py", "run_rbdtector.py", "run_parkinsons.py",
-         "check_floor.py", "run_parkinsons_colab.sh"]
+         "run_rbdtector_noise.py", "check_floor.py", "run_parkinsons_colab.sh"]
 
 
 def md(text):
@@ -148,14 +148,13 @@ RBDtector, the open-source RWA scorer used in Parkinson's and RBD research, run 
 (and with the floor-corrected baseline) on the CAP noise ladder and on MGH, HMC and BOAS
 as recorded; then the analyses fixed in advance in paper/preregistration_parkinsons.md
 (change in RWA against the disease signals PD research uses, isolated RWA by system,
-recruitment arithmetic, the floor check). A few hours: RBDtector takes about a minute per
-night and step.
+recruitment arithmetic, the floor check), and the exploratory check of RBDtector on noise
+alone. RBDtector runs in the 2021 environment its requirements specify, which the script
+creates. About seven hours on one runtime (about 35 s per night, step and rule); to split
+it, run `PART=2 sh run_parkinsons_colab.sh` (MGH, HMC, BOAS) on a second runtime and
+`PART=1 sh run_parkinsons_colab.sh` (CAP, then the analysis) here; both need Drive.
 """),
-        code(f"!cd {CODE_DIR} && python run_rbdtector.py --cohort cap {{RESULT_MIRROR}} "
-             f"&& python run_rbdtector.py --cohort chal18 --sample 100 {{RESULT_MIRROR}} "
-             f"&& python run_rbdtector.py --cohort hmc {{RESULT_MIRROR}} "
-             f"&& python run_rbdtector.py --cohort boas {{RESULT_MIRROR}} "
-             f"&& python run_parkinsons.py"),
+        code(f"!cd {CODE_DIR} && sh run_parkinsons_colab.sh"),
         md("""
 The floor check for a recording of your own: an EDF on Drive and its 30-s stages (one per
 line: W, N1, N2, N3, R). It reports the system's noise floor, whether the floor-corrected

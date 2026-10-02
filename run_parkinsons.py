@@ -361,7 +361,7 @@ def figure(pd1, lad, rb, steps):
             ax.errorbar(v, yi, xerr=[[err[0]], [err[1]]], fmt="none", ecolor="k", lw=0.8, capsize=2)
     ax.set_yticks(y, [b[0] for b in bars], fontsize=6)
     if n_rec:
-        ax.text(0.98, n_rec - 0.2, "same RBD nights, noise floor raised to HMC's (1.5 µV):",
+        ax.text(0.98, n_rec - 0.2, "same RBD nights at HMC's floor (1.5 µV):",
                 transform=ax.get_yaxis_transform(), fontsize=5.5, ha="right", va="center", style="italic")
     ax.set_ylim(-0.6, n_rec + 2.0)
     ax.set_xlabel("tonic RWA, percentage points")
