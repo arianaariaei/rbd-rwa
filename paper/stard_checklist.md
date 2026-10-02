@@ -18,14 +18,14 @@ in the clinical cohorts. Status: done / partial / TO DO.
 | 10a | Index test in replicable detail | Methods 2.2-2.4 + open code - done |
 | 10b | Reference standard in replicable detail | Methods 2.1 - partial: CAP gives no RBD criteria; say so, and that the clinical diagnosis itself requires PSG RWA (incorporation bias; sensitivity optimistic) |
 | 11 | Rationale for the reference standard | Methods 2.1 - partial |
-| 12a | Index-test cut-offs, pre-specified vs exploratory | Methods 2.4-2.7 - done (published = pre-specified; re-derived = exploratory; noise ladder and floor-corrected criteria pre-registered, commits 6d3cc6b and 20b9ec2) |
+| 12a | Index-test cut-offs, pre-specified vs exploratory | Methods 2.4-2.7, 2.9 - done (published = pre-specified; re-derived = exploratory; noise ladder, floor-corrected criteria, external cohorts and Parkinson's analyses pre-registered, commits 6d3cc6b, 20b9ec2, 48053f3 and 1e7acf0; RBDtector cut-off 23.5% from its authors) |
 | 12b | Reference-standard cut-offs | not applicable (clinical diagnosis) |
 | 13a | Index-test readers blinded to reference | done by design (fully automated) |
 | 13b | Reference readers blinded to index test | not applicable / unknown for CAP - state |
 | 14 | Methods for accuracy estimates and comparisons | Methods 2.5 - done (Wilson CIs, AUC, kappa, McNemar, LOOCV, bootstrap) |
-| 15 | Handling of indeterminate results | TO DO: nights where background could not be estimated or RAI undefined are excluded - report counts |
+| 15 | Handling of indeterminate results | TO DO: nights where background could not be estimated or RAI undefined are excluded - report counts (RBDtector: none failed, none excluded) |
 | 16 | Handling of missing data | TO DO: missing ECG (no heartbeat removal), missing units (absolute criteria skipped), missing demographics (HMC) |
-| 17 | Analyses of variability, pre-specified vs exploratory | Methods 2.6 - done; label background and boundary analyses as exploratory, ladder as pre-specified |
+| 17 | Analyses of variability, pre-specified vs exploratory | Methods 2.6, 2.9 - done; label background and boundary analyses as exploratory, ladder as pre-specified; RBDtector noise-only check exploratory (after PD2b was missed) |
 | 18 | Intended sample size and how determined | TO DO: state that all available open data were used; report precision instead |
 | 19 | Participant flow diagram | TO DO (counts available): development cohorts 1,253 recordings -> 1 no chin EMG, 75 < 10 min REM, 3 withdrawn (HMC) -> 1,177; external BOAS 128 nights/100 participants -> 100 first nights -> 1 < 10 min REM -> 99; DOD-O 56 -> 1 unscored -> 55 -> 2 < 10 min REM -> 53; DOD-H 25 -> 25 |
 | 20 | Baseline characteristics | T1 - done incl. CAP ages (gender-age.xlsx); add HMC aggregate demographics from the database description |
@@ -37,6 +37,6 @@ in the clinical cohorts. Status: done / partial / TO DO.
 | 25 | Adverse events | not applicable (secondary analysis) |
 | 26 | Limitations | Discussion - done |
 | 27 | Implications for practice | Discussion/Conclusion - done |
-| 28 | Registration | not registered; noise ladder (6d3cc6b), floor-corrected criteria (20b9ec2) and external cohorts (48053f3) pre-specified in the repository |
-| 29 | Protocol access | repository: paper/preregistration_noise_ladder.md, preregistration_floor_corrected.md, preregistration_external.md, code, notebook |
+| 28 | Registration | not registered; noise ladder (6d3cc6b), floor-corrected criteria (20b9ec2), external cohorts (48053f3) and Parkinson's analyses (1e7acf0) pre-specified in the repository |
+| 29 | Protocol access | repository: paper/preregistration_noise_ladder.md, preregistration_floor_corrected.md, preregistration_external.md, preregistration_parkinsons.md, code, notebook; deviations in results_parkinsons_2026-10-02.md |
 | 30 | Funding | TO DO: state "no funding" |

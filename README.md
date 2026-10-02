@@ -11,9 +11,12 @@ Main findings so far (details in `paper/`):
   system's noise floor: quieter systems flag more patients, noisier ones miss RBD.
 - A floor-corrected version of the criteria (noise subtracted, not multiplied), fixed in
   advance, removes the dependence on noise and the site difference.
-- For Parkinson's disease research, where RBD is the strongest prodromal marker: how far the
-  recording system moves RWA compared with the disease signals that research relies on, and
-  whether RBDtector, the open scorer used in Parkinson's and RBD studies, behaves the same.
+- For Parkinson's disease research, where RBD is the strongest prodromal marker: on the same
+  RBD nights, a noisier recording system alone lowered tonic RWA by two-thirds of the
+  difference that predicted later Parkinson's disease. RBDtector, the open scorer used in
+  Parkinson's and RBD studies, behaves the same when run unchanged (it flagged 89% of healthy
+  volunteers on the quietest system); the floor-corrected baseline removes most of this
+  (9 of 10 pre-specified predictions met).
 
 Check a recording system of your own with `check_floor.py` (an EDF and its 30-s stages):
 it reports the system's noise floor, whether the floor-corrected criteria apply, and what
@@ -63,6 +66,8 @@ source file:
     run_external.py   external cohorts (pre-specified), figure 9
     src/rbdtector.py  RBDtector (open RWA scorer) run unchanged on our nights
     run_rbdtector.py  RBDtector on the noise ladder and three systems
+    run_rbdtector_noise.py  RBDtector on noise alone (exploratory)
+    run_parkinsons_colab.sh the Parkinson's runs and analysis in one command on Colab
     run_parkinsons.py what the floor means for Parkinson's research (pre-specified), figure 10
     src/floorcheck.py, check_floor.py   the floor check for one recording
     tools/build_notebook.py   writes notebooks/RBD_RWA.ipynb

@@ -22,6 +22,12 @@ three systems recorded muscle activity at the same size, and floor-corrected ver
 the criteria, specified in advance, no longer depended on the noise floor and gave the same
 answer at both hospitals.
 
+The effect is large in the units Parkinson's disease research uses. On the same RBD
+nights, HMC's noise floor lowered tonic RWA by two-thirds of the difference that predicted
+later Parkinson's disease, and RBDtector, the open-source scorer built for this field,
+inherited the dependence when run unchanged; floor correction removed it from both, with
+one exception among the pre-specified tests, in patients without RBD.
+
 ## Why the same criteria give different answers at different sites
 
 The Montreal, SINBAR and AASM criteria judge muscle activity against a background: activity
@@ -172,6 +178,69 @@ reference used. The RAI, which subtracts a moving-minimum noise estimate, was al
 across sites (MGH 9%, HMC 7%) and nearly immune to added noise but, like any absolute
 measure, depends on gain.
 
+## What this means for Parkinson's disease research
+
+Parkinson's disease research uses the amount of RWA, not only its presence: to estimate
+who will convert [Postuma 2010], to follow progression [Iranzo 2009], to define isolated
+RWA as a possible earlier stage [Ferri 2026; Dodet 2024], and, in multi-center prodromal
+cohorts, to pool patients recorded on different systems. Our results suggest that in each
+of these uses the recording system is a hidden variable, and in the first two one of the
+same size as the effects studied. On the same RBD nights, the difference in noise floor between two real hospital
+systems moved the published tonic percentage by two-thirds of the baseline difference
+that predicted Parkinson's disease, and by four and a half years of its reported
+progression. In multi-center cohorts, part of the between-patient variation in RWA may
+therefore reflect where a patient was recorded; adjusting for center absorbs this only if
+each center's floor is stable and unrelated to outcome. In longitudinal studies, a change
+of amplifier or electrodes during follow-up could appear as progression or as regression:
+a rise of 0.6 uV in the floor lowered tonic RWA as much as four and a half years of the
+reported progression would raise it. We could not measure
+this in people with Parkinson's disease, because no such recordings are openly available,
+but nothing in the mechanism is specific to the patients we had: it is a property of the
+measurement.
+
+RBDtector, the open-source scorer developed for this field, inherits the dependence,
+because its baseline is, in effect, the noise floor (1.14 times ours). Its verdicts in
+established RBD were robust, since those patients lie far above its cut-off, but its
+continuous percentages were not, and in people without RBD its verdict largely followed
+the recording system: 89% of healthy volunteers on the quietest system, 20% of patients on
+the noisiest. Replacing its baseline with the floor-corrected one, a change that leaves
+the rest of the program untouched, kept its percentages in RBD within a point at a noisier
+floor and closed a 45-point gap between hospitals. It did not fully hold for patients
+without RBD in the noisier half of the correction's range, where 6 of 51 nights turned
+positive at HMC's floor. Noise alone explains little of this: in simulated noise, the corrected
+RBDtector counted activity in only 0.4% of REM mini-epochs at that floor, about a seventh of
+the rise. More likely, noise lifted small muscle activity just below the threshold over it
+more often than it pushed larger activity under it. Small activity is far more common in
+REM without RBD than large, and RBDtector judges 30-ms chunks of about eight samples, over
+which the RMS of noise varies far more than over the 1-s windows our own rules use; we did
+not test this explanation. Correcting a detector this fine may require allowing for the
+spread of the noise as well as its mean. For RBDtector's users, the practical points are to
+report each recording's floor with its output and not to expect its chin cut-off to
+transfer between systems unchanged.
+
+For isolated RWA, the definition matters more than for RBD. DREAMER's RAI-based definition
+was the most stable we tested: it labeled 8-17% of nights without RBD on every system and
+hardly moved with added noise, consistent with the RAI's own subtraction of a noise
+estimate. The relative criteria would have labeled between 9% and 96% of comparable people
+depending on the system, a range wide enough to decide by itself how common an "earlier
+stage" appears. Because the RAI depends on gain, multi-center studies of isolated RWA
+should still report the floor and net NREM tone that the floor check provides.
+
+For recruitment into prevention trials the numbers are sobering but usable. At an RBD
+prevalence of 2% among people aged 50 or over, the published SINBAR chin rule would
+require about 39 sleep studies to be reviewed per patient with RBD found, RBDtector about
+37, and the best rule we tested, the SINBAR-FC cut-off re-derived on CAP, about 8.
+Automated RWA scoring of routine polysomnograms is therefore better used as a pre-filter
+for clinical and video review than as a case-finding test, and its yield will depend on the
+recording system unless the floor is taken into account. The same caution applies where a
+polysomnogram showing RWA carries diagnostic weight, as an indicative biomarker of dementia
+with Lewy bodies [McKeith 2017].
+
+None of this needs new data. Each recording's floor can be measured in seconds (the floor
+check is provided as a tool); thresholds can be set against it rather than in multiples of
+it; and multi-center and longitudinal analyses can check that floors do not differ between
+the groups compared or change during follow-up.
+
 ## Clinical covariates
 
 Sleep apnea raised the odds of a positive call by about 20% per 10 events per hour,
@@ -211,6 +280,17 @@ ladder adds white, stationary noise; it can raise a floor but not lower one, and
 is colored and varies through the night. Finally, the databases do not document
 medication, electrode montage or amplifier settings.
 
+The Parkinson's analyses have limitations of their own. No recordings of people with
+Parkinson's disease are openly available, so the effects were measured in isolated RBD,
+in patients with other sleep disorders and in healthy adults, and compared with
+benchmarks from cohorts recorded on other equipment; the comparison concerns scale, and
+does not suggest those findings are artifacts. RBDtector was run on chin EMG alone,
+without the arousal, snoring and artifact annotations its published cut-off assumes, which
+may raise its absolute percentages but cannot explain changes on the same nights. Its
+MGH estimates rest on a random 100 of the 925 nights. The one missed prediction was
+examined only in simulated noise, after the result was known, and the explanation offered
+for it remains untested.
+
 ## Conclusion
 
 Published RWA cut-offs do not transfer to automated scoring across recording sites: the
@@ -222,6 +302,9 @@ correction that needs nothing but the recording, removed both effects in a pre-s
 test. Before automated RWA quantification is used to find people with prodromal
 synucleinopathy in routine polysomnograms, or pooled across the centers of multi-site
 cohorts, thresholds should be defined against the noise floor rather than in multiples of
-it, and reported with the floor and reference on which they were set.
+it, and reported with the floor and reference on which they were set. The same applies
+when the amount of RWA is used to predict or follow Parkinson's disease: on the same
+nights, the recording system alone moved it by two-thirds of the difference that
+predicted the disease.
 
 <!-- References: see references.md (verified 2026-09-26). -->

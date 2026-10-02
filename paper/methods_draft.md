@@ -259,6 +259,19 @@ RBDtector's baseline to the RMS of band-limited white noise, by simulation) and 
 nothing else was changed. RBDtector was run on the CAP nights as recorded and with the
 noise ladder's own noise at +0.5, +1.0 and +2.0 uV and at a quiet-REM level of 1.5 uV, and,
 as recorded, on 100 MGH nights drawn at random, all HMC nights and the BOAS first nights.
+It ran in the software environment its requirements file specifies (Python 3.9, NumPy 1.21,
+pandas 1.3, SciPy 1.7; pyEDFlib 0.1.42, the newest release its "~=0.1.22" pin allows, whose
+renamed sampling-rate key was mapped back to the name RBDtector reads). Two changes made the
+1,412 runs fit in Colab sessions without changing any score: a helper that assigns
+each short REM fragment to the nearest REM block by Python's min() over every REM sample was
+replaced by the equivalent NumPy operation, and each night was written from two epochs
+before its first REM epoch to two after its last, keeping the night's clock times so that
+RBDtector's 30-ms, 3-s and 30-s grids fell where they would. On a test night the scores were
+identical, to the last digit, to those of the unchanged program on the whole night, and a run
+took 35 s instead of 81 s. The floor-corrected run of each night reused the baseline its
+published run had computed from the same files. The runs were split between two Colab
+runtimes, and one run was resumed after a memory failure (details with the results,
+Supplement S4); no score was affected.
 
 *Predictions.* Ten outcomes were fixed in advance: on the RBD nights, a mean fall of at
 least 10 points in published Montreal and RBDtector tonic percentages (a third of the
@@ -270,6 +283,12 @@ of at least 20 points that floor correction at least halves, at least 50% of BOA
 flagged with at most half as many under floor correction, and a negative rank correlation
 between a night's floor and its "any" percentage across nights without RBD, weaker under
 floor correction.
+
+*Exploratory check (after the results were known).* Because one prediction failed (Section 3.14),
+RBDtector was also run on 12 simulated nights of band-limited white noise alone (10-100 Hz,
+50-Hz notch, 256 Hz, 80 minutes of REM), three at each of four noise levels from 0.5 to
+2.0 uV, with its published baseline and with the floor-corrected baseline at guards of 1.5
+and 2.0; any activity it reports there is noise counted as muscle.
 
 *Isolated RWA, recruitment and the floor check (descriptive).* For nights without RBD we
 report the share labeled by DREAMER's definition of isolated RWA (RAI < 0.85) [Ferri 2026],

@@ -240,3 +240,68 @@ different systems gave the same value, this more likely reflects their populatio
 gain. And the SINBAR-FC cut-off re-derived on CAP flagged 11% [6-19] of BOAS and 12% [4-30] of
 DOD-H nights, above the 10% set in advance (E5). Eight of the twelve pre-specified checks
 were met.
+
+## 3.14 What the noise floor means for Parkinson's disease research (pre-specified)
+
+On the same 21 RBD nights, raising the quiet-REM level from 0.86 uV as recorded to HMC's
+1.5 uV lowered the published Montreal tonic percentage by 21.4 points [13.2-29.7], from
+53.3% to 31.8% (Fig. 10A; Table P1). That is two-thirds of the 31.9-point difference in
+baseline tonic RWA that separated RBD patients who later developed Parkinson's disease
+from those who remained disease-free [Postuma 2010], and the rise reported over 4.5 years
+of follow-up in isolated RBD [Iranzo 2009]. The phasic percentage fell by 14.3 points and
+SINBAR "any" by 20.7. The floor-corrected rules moved by about one point (Montreal tonic
+-1.1 [-1.7 to -0.5], phasic -0.4, SINBAR "any" -1.1). Along the ladder, the published tonic
+percentage fell steadily with added noise (to 11.3% at +3.0 uV); the floor-corrected one
+stayed within 3.2 points up to +1.5 uV and fell only beyond the correction's range.
+
+RBDtector, the open-source scorer developed on patients with Parkinson's disease and RBD,
+behaved in the same way when run unchanged. Its baseline, the lowest 30-s RMS window of
+each REM period, was 1.14 times our quiet-REM floor (median), and its chin "any" percentage
+agreed with our SINBAR measure (Spearman rho 0.79, 418 nights). On the RBD nights its tonic
+percentage fell by 12.1 points [7.3-17.0] at 1.5 uV (38% of the Parkinson's difference,
+2.5 years of progression) and, with the floor-corrected baseline, did not change (+0.1
+[-0.9 to +1.3]). Its verdict on the RBD nights held either way - 20 of 21 flagged as
+recorded and at 1.5 uV, with or without correction - because their "any" percentages lay
+far above its 23.5% cut-off. Its verdict on people without RBD did not (Fig. 10B-C).
+Published, it flagged 78% of CAP's same-system patients as recorded and 25% at 1.5 uV (27
+nights changed, all to negative); across systems, 89% of healthy BOAS volunteers, 65% of
+MGH and 20% of HMC patients (MGH - HMC +44.6 points); and across the 397 nights without
+RBD, the higher a night's floor, the lower its "any" percentage (rho -0.52 [-0.59 to
+-0.43]). With the floor-corrected baseline, MGH and HMC were flagged at 55% and 56% (-0.8
+points), BOAS at 34% and CAP's patients at 37%, while RBD sensitivity stayed at 95%.
+
+One of the ten predictions was not met. Floor-corrected, RBDtector flagged 49.0% of CAP's
+same-system patients at 1.5 uV against 37.3% as recorded (+11.8 points [2.9-20.6]; 6
+nights turned positive, none negative), where at most 5 points had been allowed. Behind
+this lay a small but systematic rise in the continuous percentages ("any" +2.9 [1.7-4.1],
+phasic +2.3, tonic +0.6). In an exploratory check made after this result, RBDtector scored
+simulated nights of noise alone: with its published baseline it counted no activity at any
+level, and with the floor-corrected baseline none up to 1.0 uV and 0.4% of REM mini-epochs
+at 1.5 uV (Table X1), about a seventh of the rise. Across nights without RBD, correction
+reversed the relation with the floor (rho +0.31 [+0.21 to +0.40]) rather than removing it,
+which these data cannot separate from population: the quietest system recorded healthy
+volunteers, the noisiest, patients.
+
+Isolated RWA - RWA without RBD, followed as a possible earlier stage - depended on the
+definition and the system (Table P3). By DREAMER's definition (RAI < 0.85), 8-17% of nights
+without RBD qualified in every cohort (12% of MGH patients and 17% of healthy BOAS
+volunteers aged 50 or over), and the share hardly moved with added noise (MGH 15% to 13%
+at 1.5 uV, CAP patients 16% to 16%), although 2 of the 21 RBD nights moved above the
+threshold (76% to 67%). The relative criteria labeled between 9% (Montreal, HMC) and 96%
+(SINBAR and RBDtector, BOAS aged 50 or over) of comparable people, in the order of the
+recording systems' floors rather than of the populations.
+
+For recruitment into prevention trials, the arithmetic was dominated by false positives
+(Table P4). Per 1,000 sleep studies of people aged 50 or over at an RBD prevalence of 2%,
+the published SINBAR chin criterion would flag 752 to find 19 patients with RBD (positive
+predictive value 2.5%; 39 studies reviewed per patient found), RBDtector 696 (2.7%) and the
+published Montreal criteria 308 (5.9%). The SINBAR-FC cut-off re-derived on CAP would flag
+129 to find 17 (13.3%; 8 per patient), of whom about 13 would be expected to develop a
+synucleinopathy within 12 years [Postuma 2019]; RAI < 0.8 flagged fewer (93) but found only
+11.
+
+The floor check (Table P5) summarizes the problem in one number per system: to count as
+RWA under a threshold of twice the floor, muscle activity had to reach 0.61 uV on BOAS's
+system and 2.54 uV on HMC's, a four-fold difference in what is called RWA, against 1.73 uV
+on every system under floor correction. Most nights lay within the correction's range (63%
+at HMC, 76-100% elsewhere).

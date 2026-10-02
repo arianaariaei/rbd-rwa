@@ -80,3 +80,20 @@ DOD-O); squares, healthy volunteers (BOAS, first night per participant; DOD-H); 
 On quiet systems the published criteria flag most healthy volunteers (SINBAR: BOAS 91%, DOD-H
 84%); floor correction removes the dependence on the recording's floor and leaves the
 population to order the groups.
+
+**Figure 10. What the noise floor means for Parkinson's disease research (pre-specified).**
+(A) Change in tonic chin RWA, in percentage points, on the same 21 CAP RBD nights when the
+quiet-REM level is raised from 0.86 uV as recorded to 1.5 uV (HMC's), mean with 95%
+bootstrap interval, under the published and floor-corrected Montreal criteria and
+RBDtector. Gray: the difference in baseline tonic RWA between RBD patients who later
+developed Parkinson's disease and those who remained disease-free (Postuma 2010), and the
+rise over a mean 5 years in isolated RBD (Iranzo 2009). (B) RBDtector, run unchanged: share
+of nights flagged (chin "any" >= 23.5%) as white noise is added to the same nights, plotted
+against the median quiet-REM level, with its published baseline (dotted) and the
+floor-corrected baseline (solid): CAP RBD (red, n = 21) and CAP patients on the same system
+(gray, n = 51). (C) RBDtector on the nights as recorded, by recording system: published
+(open) and floor-corrected (filled; arrows from published to corrected), against each
+cohort's median quiet-REM level: CAP RBD (star), CAP patients, MGH (random 100), HMC
+(n = 147) and BOAS (healthy volunteers, first nights, n = 99). The recording system alone
+moves tonic RWA by two-thirds of the difference that predicted Parkinson's disease;
+floor correction removes the shift and the gap between hospitals.
