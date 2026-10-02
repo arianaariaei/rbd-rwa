@@ -20,7 +20,8 @@
    doi:10.1093/sleep/zsy133
 7. Röthenbacher A, Cesari M, Doppler CEJ, et al. RBDtector: an open-source software to detect
    REM sleep without atonia according to visual scoring criteria. Sci Rep. 2022;12(1):20886.
-   doi:10.1038/s41598-022-25163-9
+   doi:10.1038/s41598-022-25163-9 (21 PD with RBD, 16 PD without RBD, 81 isolated RBD, 72
+   controls; chin-only cut-offs, Table 5: any 23.5%, phasic 19.0%, tonic 7.1%)
 8. Joza S, Pelletier A, Gagnon JF, et al. Validation of RBDtector: an open-source automated
    software for scoring REM sleep without atonia. J Sleep Res. 2025;34(6):e70037.
    doi:10.1111/jsr.70037 (new site: combined cut-off 33.0%, close to SINBAR's 32%)
@@ -96,6 +97,24 @@ Added 2026-09-26 (second round; metadata from Europe PMC):
     potentials during human sleep using high frequency/low frequency spectral power ratios.
     Sensors (Basel). 2021;22(1):55. doi:10.3390/s22010055 (a spectral, noise-robust
     alternative to amplitude thresholds)
+
+Added 2026-10-02 (Parkinson's disease; metadata from Europe PMC):
+
+31. Postuma RB, Gagnon JF, Rompré S, Montplaisir JY. Severity of REM atonia loss in idiopathic
+    REM sleep behavior disorder predicts Parkinson disease. Neurology. 2010;74(3):239-244.
+    doi:10.1212/WNL.0b013e3181ca0166 (26 later converters vs matched disease-free patients;
+    baseline tonic chin RWA 72.9% in later PD, 62.7% any neurodegeneration, 41.0% disease-free)
+32. Iranzo A, Ratti PL, Casanova-Molla J, Serradell M, Vilaseca I, Santamaría J. Excessive
+    muscle activity increases over time in idiopathic REM sleep behavior disorder. Sleep.
+    2009;32(9):1149-1153. doi:10.1093/sleep/32.9.1149 (11 patients, mean 5 years; mentalis
+    tonic 30% -> 54%)
+33. McKeith IG, Boeve BF, Dickson DW, et al. Diagnosis and management of dementia with Lewy
+    bodies: fourth consensus report of the DLB Consortium. Neurology. 2017;89(1):88-100.
+    doi:10.1212/WNL.0000000000004058 (polysomnographic RWA is an indicative biomarker)
+34. Dodet P, Houot M, Leu-Semenescu S, et al. Isolated REM sleep without atonia is not
+    equivalent to REM sleep behavior disorder in early-stage Parkinson's disease. Mov Disord.
+    2024;39(7):1190-1202. doi:10.1002/mds.29813 (159 early PD: 25% RBD, 25% isolated RWA, 50%
+    normal; RBD had greater cognitive and motor decline over 4 years)
 
 Search for prior work on the noise floor (Europe PMC, 2026-09-26: "REM sleep without
 atonia" with noise / background EMG / automated / multicentre / equipment): no study found

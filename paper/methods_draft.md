@@ -224,8 +224,70 @@ positivity that weakens under floor correction, specificity of the SINBAR-FC cut
 re-derived on CAP (<= 10% of healthy and <= 20% of DOD-O nights flagged), and DOD-O's
 published positivity within 10 points of MGH's noise-ladder curve at DOD-O's floor.
 
-## 2.9 Reproducibility
+## 2.9 Implications for Parkinson's disease research (pre-specified)
 
-All code (Python; NumPy, SciPy, pandas, wfdb) is openly available and runs end-to-end
-from a single Google Colab notebook that downloads the public data, so every number in
-this paper can be regenerated without local installation.
+RWA is used in Parkinson's disease (PD) research not only to confirm RBD but as a
+continuous measure: baseline tonic chin RWA was 31.9 percentage points higher in patients
+with RBD who later developed PD than in those who remained disease-free (72.9% vs 41.0%)
+[Postuma 2010], and it rose by 24 points over a mean 5 years in isolated RBD (30% to 54%,
+about 4.8 points per year) [Iranzo 2009]. A second analysis plan, committed before it was
+run (Supplement S4), put the recording system's effect in these units and tested the
+open-source scorer used in PD and RBD studies, RBDtector [Röthenbacher 2022; Joza 2025].
+
+*The same RBD nights at a noisier floor.* For the 21 CAP RBD nights and the 51 same-system
+patients, the per-night change in Montreal tonic and phasic and SINBAR "any" percentages
+from the night as recorded to the noise-ladder copy whose quiet-REM level was raised to
+1.5 uV (HMC's median; Section 2.6) was summarized by its mean (95% bootstrap interval, 2,000
+resamples) and median, for the published and floor-corrected (B = 1.0 uV) rules, and
+compared with the two benchmarks above.
+
+*RBDtector.* RBDtector (commit 7c9c73d, May 2022) counts chin activity where the RMS of a
+30-ms chunk (on two grids offset by 15 ms) exceeds twice a baseline, the lowest 30-s RMS
+window of artifact-free REM in each REM period; activity lasting at least 0.1 s, with gaps
+under 0.25 s bridged, is "sustained", 30-s epochs more than half sustained are tonic, and
+3-s mini-epochs containing sustained runs of at most 5 s are phasic, or containing any
+activity, "any". It was run through its own controller with default settings on input
+files written in its format: the chin EMG as recorded, band-pass filtered and notched as an
+acquisition system would (RBDtector does not filter), heartbeat left in, at 256 Hz (CAP
+decimated from 512 Hz, which is what RBDtector's spline resampling does at that rate; MGH's
+200 Hz resampled by RBDtector), with the expert stages and no arousal annotations. A night
+was positive when chin "any" activity reached 23.5%, RBDtector's own chin-only cut-off
+[Röthenbacher 2022]. In the floor-corrected variant the baseline RBDtector computes was
+replaced, before detection, by half the floor-corrected threshold, T / 2 with
+T = max(sqrt(n^2 + 3 B^2), 1.5 n), where n is the baseline divided by 0.976 (the ratio of
+RBDtector's baseline to the RMS of band-limited white noise, by simulation) and B = 1.0 uV;
+nothing else was changed. RBDtector was run on the CAP nights as recorded and with the
+noise ladder's own noise at +0.5, +1.0 and +2.0 uV and at a quiet-REM level of 1.5 uV, and,
+as recorded, on 100 MGH nights drawn at random, all HMC nights and the BOAS first nights.
+
+*Predictions.* Ten outcomes were fixed in advance: on the RBD nights, a mean fall of at
+least 10 points in published Montreal and RBDtector tonic percentages (a third of the
+difference that predicted PD, two years of the reported rise) and a change of at most 3
+points under floor correction; for RBDtector, a fall of at least 10 points in the share of
+same-system patients flagged and a change of at most 5 points under floor correction, a
+change in RBD sensitivity of at most 10 points under floor correction, an MGH-HMC difference
+of at least 20 points that floor correction at least halves, at least 50% of BOAS nights
+flagged with at most half as many under floor correction, and a negative rank correlation
+between a night's floor and its "any" percentage across nights without RBD, weaker under
+floor correction.
+
+*Isolated RWA, recruitment and the floor check (descriptive).* For nights without RBD we
+report the share labeled by DREAMER's definition of isolated RWA (RAI < 0.85) [Ferri 2026],
+by RAI < 0.8, and by the published and floor-corrected Montreal, SINBAR and RBDtector rules,
+by cohort and in those aged 50 or over. For prevention-trial recruitment we computed, per
+1,000 polysomnograms of people aged 50 or over, the nights flagged, the RBD patients found,
+the positive predictive value, the studies reviewed per patient found, and the number
+expected to develop a synucleinopathy within 12 years (73.5% [Postuma 2019]), at RBD
+prevalences of 1%, 2% and 5%, with sensitivity from CAP RBD and false-positive rates from
+MGH patients aged 50 or over (an upper bound, since a few may have RBD). For each recording
+system we report a floor check: the quiet-REM level, the share of nights within the
+floor-corrected rule's range (sampling rate at least 200 Hz and quiet-REM level at most
+1.7 uV), the net N2/N3 tone as a gain check, and the muscle activity the published
+threshold requires. The same check is provided as a tool that takes one EDF recording and
+its stages (`check_floor.py`).
+
+## 2.10 Reproducibility
+
+All code (Python; NumPy, SciPy, pandas, wfdb, pyedflib) is openly available and runs
+end-to-end from a single Google Colab notebook that downloads the public data, so every
+number in this paper can be regenerated without local installation.

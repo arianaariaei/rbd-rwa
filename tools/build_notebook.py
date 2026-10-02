@@ -23,7 +23,7 @@ FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fe
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
          "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py", "run_external.py",
          "src/rbdtector.py", "src/floorcheck.py", "run_rbdtector.py", "run_parkinsons.py",
-         "check_floor.py"]
+         "check_floor.py", "run_parkinsons_colab.sh"]
 
 
 def md(text):
