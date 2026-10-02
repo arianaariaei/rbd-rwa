@@ -16,7 +16,7 @@ RBDtector's own controller on it and returns the chin percentages it reports.
 RBDtector does not filter: the signal is band-passed (10-100 Hz) and notched
 as an acquisition system would, and the heartbeat is left in, as RBDtector
 sees it in practice. No arousals are given (one dummy event in the first
-second, which is wake), so no REM is excluded for arousals in any cohort.
+second written, which is not REM), so no REM is excluded for arousals.
 
 The floor-corrected variant changes one thing: the baseline RBDtector computes
 is replaced, before detection, by half the floor-corrected threshold
@@ -176,8 +176,23 @@ def _patch():
     PSG._rwa_patched = True
 
 
-def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30):
-    """One night in RBDtector's input format; returns the folder."""
+def rem_span(hypnogram, margin=2):
+    """Epochs [a, b) from `margin` epochs before the first REM epoch to `margin`
+    epochs after the last (the whole night if there is no REM)."""
+    rem = np.flatnonzero(np.asarray(hypnogram) == 4)
+    if len(rem) == 0:
+        return 0, len(hypnogram)
+    return max(0, int(rem[0]) - margin), min(len(hypnogram), int(rem[-1]) + margin + 1)
+
+
+def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30, trim=True):
+    """One night in RBDtector's input format; returns the folder.
+
+    trim: write only the stretch from two epochs before the first REM epoch to
+    two after the last. RBDtector scores REM only, the clock times stay those
+    of the whole night (so its 30-ms, 3-s and 30-s grids fall where they would)
+    and the first and last epochs it sees are still not REM, so the result is
+    the whole night's, in about two thirds of the time (checked on test nights)."""
     import pyedflib
     from pyedflib import highlevel
     folder = Path(folder)
@@ -187,7 +202,11 @@ def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30):
     fs = int(fs)
     n_sec = len(x_uv) // fs
     n_ep = min(len(hypnogram), n_sec // epoch_s)
-    x = np.clip(np.asarray(x_uv[: n_ep * epoch_s * fs], dtype=np.float64), -PHYS_UV, PHYS_UV)
+    a, b = rem_span(hypnogram[:n_ep]) if trim else (0, n_ep)
+    hypnogram = hypnogram[a:b]
+    start = START + dt.timedelta(seconds=a * epoch_s)
+    x = np.clip(np.asarray(x_uv[a * epoch_s * fs: b * epoch_s * fs], dtype=np.float64),
+                -PHYS_UV, PHYS_UV)
     # pyEDFlib 0.1.22 calls the rate 'sample_rate', later versions 'sample_frequency'
     import inspect
     rate = "sample_frequency" if "sample_frequency" in \
@@ -195,15 +214,15 @@ def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30):
     sh = highlevel.make_signal_header("EMG", dimension="uV", physical_min=-PHYS_UV,
                                       physical_max=PHYS_UV, digital_min=-32768,
                                       digital_max=32767, **{rate: fs})
-    hdr = highlevel.make_header(startdate=START)
+    hdr = highlevel.make_header(startdate=start)
     highlevel.write_edf(str(folder / "night.edf"), [x], [sh], hdr,
                         file_type=pyedflib.FILETYPE_EDFPLUS)
-    clock = lambda s: (START + dt.timedelta(seconds=s)).strftime("%H:%M:%S") + ",000"
-    head = START.strftime("%d.%m.%Y %H:%M:%S")
+    clock = lambda s: (start + dt.timedelta(seconds=s)).strftime("%H:%M:%S") + ",000"
+    head = start.strftime("%d.%m.%Y %H:%M:%S")
     lines = ["Signal ID: SchlafProfil\\profil", f"Start Time: {head}", "Unit: ",
              "Signal Type: Discret", "Events list: N4,N3,N2,N1,REM,Wake,Movement",
              "Rate: 30 s", ""]
-    lines += [f"{clock(i * epoch_s)}; {STAGE.get(int(c), 'A')}" for i, c in enumerate(hypnogram[:n_ep])]
+    lines += [f"{clock(i * epoch_s)}; {STAGE.get(int(c), 'A')}" for i, c in enumerate(hypnogram)]
     (folder / "Sleep profile - night.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     for name, sid in (("Classification Arousals - night.txt", "KorrelationMA\\MAK"),
                       ("Flow Events - night.txt", "FlowEvents\\Events")):

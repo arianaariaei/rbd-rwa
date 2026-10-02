@@ -3,9 +3,9 @@
 # runtime, reusing the scores already on Drive; everything new is copied back to
 # Drive as it is made. Run from the code directory, e.g. in Colab's terminal:
 #   cd /content/rbd-rwa && setsid nohup sh run_parkinsons_colab.sh > /content/pd.log 2>&1 < /dev/null &
-# RBDtector needs about a minute per night and step on Colab's 2-core runtime, so
-# the work can be split over two runtimes: PART=1 (CAP ladder, BOAS, then the
-# analysis, once part 2 is on Drive) and PART=2 (MGH and HMC).
+# RBDtector needs about 75 s per night and step (both rules) on Colab's 2-core
+# runtime, so the work can be split over two runtimes: PART=1 (the CAP ladder, then
+# the analysis once part 2 is on Drive) and PART=2 (MGH, HMC and BOAS).
 set -e
 PART=${PART:-all}
 D=/content/drive/MyDrive/rbd-rwa
@@ -30,13 +30,12 @@ if [ ! -x "$E/bin/python" ]; then
 fi
 RB="$E/bin/python run_rbdtector.py --out $O --mirror $D/results"
 if [ "$PART" != 2 ]; then
-  # +0.5 and +2.0 uV dropped for run time, as the pre-registration allows
-  $RB --cohort cap --steps native,n100,h150
-  $RB --cohort boas
+  $RB --cohort cap
 fi
 if [ "$PART" != 1 ]; then
   $RB --cohort chal18 --sample 100
   $RB --cohort hmc
+  $RB --cohort boas
 fi
 if [ "$PART" = 2 ]; then touch "$D/results/rbdtector_part2.done"; echo PART2_DONE; exit 0; fi
 if [ "$PART" = 1 ]; then
