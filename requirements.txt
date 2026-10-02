@@ -5,3 +5,4 @@ matplotlib>=3.7
 statsmodels>=0.14
 wfdb>=4.1
 h5py>=3.8
+pyedflib>=0.1.30

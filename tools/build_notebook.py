@@ -21,7 +21,9 @@ DRIVE_DIR = "/content/drive/MyDrive/rbd-rwa"
 FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fetch.py",
          "src/cap.py", "src/extract.py", "src/pack.py", "src/cohorts.py", "src/rwa.py",
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
-         "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py", "run_external.py"]
+         "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py", "run_external.py",
+         "src/rbdtector.py", "src/floorcheck.py", "run_rbdtector.py", "run_parkinsons.py",
+         "check_floor.py"]
 
 
 def md(text):
@@ -71,7 +73,7 @@ except Exception as e:
 PACK_MIRROR = f'--mirror {{MIRROR}}/packs' if MIRROR else ''
 RESULT_MIRROR = f'--mirror {{MIRROR}}/results' if MIRROR else ''
 os.environ['RBD_DURABLE_DIR'] = '{WORK_DIR}'
-!pip -q install wfdb
+!pip -q install wfdb pyedflib
 !mkdir -p {CODE_DIR}/src {WORK_DIR}
 %cd {CODE_DIR}
 """),
@@ -139,6 +141,28 @@ Zenodo at a few MB/s and take about an hour each.
              f"&& python run_cohort.py --cohort dodo --workers 3 {{PACK_MIRROR}} "
              f"&& python run_cohort.py --cohort dodh --workers 3 {{PACK_MIRROR}} "
              f"&& python run_external.py"),
+        md("""
+## 5d. What the noise floor means for Parkinson's disease research
+
+RBDtector, the open-source RWA scorer used in Parkinson's and RBD research, run unchanged
+(and with the floor-corrected baseline) on the CAP noise ladder and on MGH, HMC and BOAS
+as recorded; then the analyses fixed in advance in paper/preregistration_parkinsons.md
+(change in RWA against the disease signals PD research uses, isolated RWA by system,
+recruitment arithmetic, the floor check). A few hours: RBDtector takes about a minute per
+night and step.
+"""),
+        code(f"!cd {CODE_DIR} && python run_rbdtector.py --cohort cap {{RESULT_MIRROR}} "
+             f"&& python run_rbdtector.py --cohort chal18 --sample 100 {{RESULT_MIRROR}} "
+             f"&& python run_rbdtector.py --cohort hmc {{RESULT_MIRROR}} "
+             f"&& python run_rbdtector.py --cohort boas {{RESULT_MIRROR}} "
+             f"&& python run_parkinsons.py"),
+        md("""
+The floor check for a recording of your own: an EDF on Drive and its 30-s stages (one per
+line: W, N1, N2, N3, R). It reports the system's noise floor, whether the floor-corrected
+criteria apply, and what each RWA threshold means in microvolts.
+"""),
+        code(f"# !cd {CODE_DIR} && python check_floor.py /content/drive/MyDrive/night.edf "
+             f"/content/drive/MyDrive/night_stages.txt --mains 50"),
         md("## 6. Score every night with every method"),
         code(f"!cd {CODE_DIR} && python run_score.py {{RESULT_MIRROR}}"),
         md("## 7. Background definition sensitivity, then the report tables"),

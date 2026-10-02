@@ -11,6 +11,13 @@ Main findings so far (details in `paper/`):
   system's noise floor: quieter systems flag more patients, noisier ones miss RBD.
 - A floor-corrected version of the criteria (noise subtracted, not multiplied), fixed in
   advance, removes the dependence on noise and the site difference.
+- For Parkinson's disease research, where RBD is the strongest prodromal marker: how far the
+  recording system moves RWA compared with the disease signals that research relies on, and
+  whether RBDtector, the open scorer used in Parkinson's and RBD studies, behaves the same.
+
+Check a recording system of your own with `check_floor.py` (an EDF and its 30-s stages):
+it reports the system's noise floor, whether the floor-corrected criteria apply, and what
+each RWA threshold means in microvolts.
 
 ## Data (all request-free)
 
@@ -54,14 +61,19 @@ source file:
     run_ladder.py     the noise ladder (pre-specified), figures 6-7
     run_floor.py      floor-corrected criteria (pre-specified), figure 8
     run_external.py   external cohorts (pre-specified), figure 9
+    src/rbdtector.py  RBDtector (open RWA scorer) run unchanged on our nights
+    run_rbdtector.py  RBDtector on the noise ladder and three systems
+    run_parkinsons.py what the floor means for Parkinson's research (pre-specified), figure 10
+    src/floorcheck.py, check_floor.py   the floor check for one recording
     tools/build_notebook.py   writes notebooks/RBD_RWA.ipynb
 
 ## Paper
 
 `paper/` holds the drafts (methods, results, discussion, abstract, figure legends,
-references, STARD checklist), the result records, the audit, and three pre-registrations,
+references, STARD checklist), the result records, the audit, and four pre-registrations,
 each committed before its analysis was run: `preregistration_noise_ladder.md`,
-`preregistration_floor_corrected.md`, `preregistration_external.md`.
+`preregistration_floor_corrected.md`, `preregistration_external.md`,
+`preregistration_parkinsons.md`.
 
 CAP annotations use wall-clock times, while the signal starts whenever the EDF header says
 (in `rbd1` the two differ by 2.6 hours); `src/cap.py` computes the offset explicitly.
