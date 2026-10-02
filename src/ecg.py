@@ -96,7 +96,7 @@ def artifact_ratio(env, env_fs, peaks_s):
     """
     Heartbeat-locked envelope profile: the median at each lag around the
     R-peak, peak (-40..+80 ms) over baseline (-500..-300 ms). ~1 means no
-    heartbeat artefact; 2.5 means the beat dominates quiet EMG. Medians at
+    heartbeat artifact; 2.5 means the beat dominates quiet EMG. Medians at
     each lag (not a maximum over noisy single beats) keep this unbiased.
     """
     i = np.round(np.asarray(peaks_s) * env_fs).astype(np.int64)

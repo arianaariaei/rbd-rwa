@@ -35,7 +35,7 @@ from .ecg import find_ecg, r_peaks, plausible, subtract_heartbeat, artifact_rati
 CHIN_ROWS = ("rms", "mav", "rms_h", "mav_h", "rms_with_ecg")
 F16_MAX = 65000.0     # float16 tops out at 65504; clip (and count) above this
 
-# How chin and leg EMG are labelled across CAP's recording systems. Bipolar
+# How chin and leg EMG are labeled across CAP's recording systems. Bipolar
 # labels win over split electrodes, which win over a lone referential name.
 CHIN_BIPOLAR = ("EMG1-EMG2", "EMG-EMG", "CHIN1-CHIN2")
 CHIN_PAIRS = (("EMG1", "EMG2"), ("CHIN1", "CHIN2"))
@@ -217,7 +217,7 @@ def extract_recording(edf_path: Path, txt_path: Path, record: str,
         "epoch_sec": EPOCH_SEC,
         "alignment": align,
     }
-    # Anything above float16's range is an artefact (tens of millivolts);
+    # Anything above float16's range is an artifact (tens of millivolts);
     # clip it rather than store inf, and record how much there was.
     meta["bins_clipped_f16"] = int((chin > F16_MAX).sum() + (legs > F16_MAX).sum())
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -253,7 +253,7 @@ def summarise(path):
     legs = "/".join(f"{m['fs']:g}" for m in meta["leg_info"]) or "-"
     unit = "" if ci["unit_known"] else "  NO-UNITS"
     e = ci.get("ecg", {})
-    ecg = (f"ECG artefact x{e['artifact_ratio_before']:.2f}->x{e['artifact_ratio_after']:.2f}"
+    ecg = (f"ECG artifact x{e['artifact_ratio_before']:.2f}->x{e['artifact_ratio_after']:.2f}"
            if e.get("beats") else "no ECG")
     return (f"{meta['record']:<8} {meta['duration_s']/3600:>5.1f} h  "
             f"chin {ci['label']} @ {ci['fs']:g} Hz{unit}  legs {legs} Hz  "

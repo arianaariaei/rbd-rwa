@@ -28,7 +28,7 @@ other numbers were unchanged). CAP's healthy group was recorded on several syste
 
 ## FC2 The same nights as the noise floor rises (noise ladder), % flagged
 
-| group, rule | as recorded | +0.5 | +1.0 | +1.5 | +2.0 | +3.0 uV | harmonised 1.5 | harmonised 2.0 |
+| group, rule | as recorded | +0.5 | +1.0 | +1.5 | +2.0 | +3.0 uV | harmonized 1.5 | harmonized 2.0 |
 |---|---|---|---|---|---|---|---|---|
 | CAP RBD level, uV | 0.86 | 0.99 | 1.31 | 1.71 | 2.13 | 3.02 | 1.50 | 2.00 |
 | Montreal published | 90.5 | 85.7 | 71.4 | 57.1 | 52.4 | 19.0 | 57.1 | 57.1 |
@@ -51,7 +51,7 @@ other numbers were unchanged). CAP's healthy group was recorded on several syste
 | SINBAR published | 25.2 | 21.1 | 17.0 | 15.0 | 12.2 | 7.5 | 21.8 | 17.0 |
 | SINBAR FC | 42.9 | 41.5 | 40.1 | 35.4 | 26.5 | 18.4 | 42.9 | 34.7 |
 
-Paired, as recorded -> harmonised 1.5 uV (same nights; exact McNemar):
+Paired, as recorded -> harmonized 1.5 uV (same nights; exact McNemar):
 - MGH Montreal: published 33.9 -> 11.9 (-22.0 [-26.9 to -17.1], 61 nights -, 0 +, p = 9e-19);
   **FC 21.3 -> 21.3 (0 nights changed)**; clamp 19.1 -> 11.9 (-7.2, 20 -).
 - MGH SINBAR: published 83.0 -> 33.2 (-49.8 [-55.7 to -43.9], 138 -, p = 6e-42);

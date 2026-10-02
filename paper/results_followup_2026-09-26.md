@@ -23,7 +23,7 @@ The MGH level is below the 1 uV resolution at which MGH stores chin EMG; HMC's i
 
 ## F2 Hardware simulation, part 1: HMC re-recorded at MGH resolution
 
-HMC signals quantised to 1 uV steps (`hmc_q1uv`), and additionally resampled to 200 Hz
+HMC signals quantized to 1 uV steps (`hmc_q1uv`), and additionally resampled to 200 Hz
 (`hmc_mgh`), then processed exactly like every other cohort.
 
 | | HMC | HMC 1 uV | HMC 1 uV + 200 Hz | MGH |
@@ -33,10 +33,10 @@ HMC signals quantised to 1 uV steps (`hmc_q1uv`), and additionally resampled to 
 | SINBAR positive, % | 25 [19-33] | 24 [18-32] | 22 [16-30] | 76 [73-79] |
 | RAI positive, % | 7 [4-13] | 7 [4-13] | 7 [4-13] | 9 [7-11] |
 | methods disagree, % of nights | 22 | 21 | 19 | 70 |
-| heartbeat artefact after removal | 1.01 | 1.01 | 1.02 | 1.08 |
+| heartbeat artifact after removal | 1.01 | 1.01 | 1.02 | 1.08 |
 
 At HMC's signal level the MGH storage format changes nothing. This does not test the regime
-MGH is in (signal below one quantisation step): see part 2.
+MGH is in (signal below one quantization step): see part 2.
 
 Storage steps, read from the file headers: HMC chin EMG 0.024 uV (16 bits over +/-800 uV);
 MGH 1 uV (WFDB gain 1 unit/uV) for chin and ECG alike.
@@ -44,7 +44,7 @@ MGH 1 uV (WFDB gain 1 unit/uV) for chin and ECG alike.
 ## F2b Hardware simulation, part 2: HMC scaled to MGH's level first
 
 HMC multiplied by 0.39 (= 0.59 / 1.52, the ratio of the median quiet-REM levels) before
-anything else (`hmc_low`), and then also quantised to 1 uV and resampled to 200 Hz
+anything else (`hmc_low`), and then also quantized to 1 uV and resampled to 200 Hz
 (`hmc_low_mgh`). The scaled copy puts HMC where MGH sits relative to the storage step.
 
 | | HMC | HMC x0.39 | HMC x0.39, 1 uV + 200 Hz | MGH |
@@ -59,7 +59,7 @@ anything else (`hmc_low`), and then also quantised to 1 uV and resampled to 200 
   multiple of the night's own level; the 10 uV absolute tonic limit is never reached) and
   halves the RAI's positives (its 1 uV amplitude bins are absolute).
 - The MGH storage format applied at MGH's level still does not raise positivity (SINBAR
-  even falls 25% -> 20%; quantisation noise lifts the quiet level 0.59 -> 0.63 uV).
+  even falls 25% -> 20%; quantization noise lifts the quiet level 0.59 -> 0.63 uV).
 - So neither the amplitude level nor the storage format explains MGH's 29% / 76%.
 
 ## F2e The reverse test: MGH with HMC's noise floor (T12)
@@ -102,7 +102,7 @@ not make a night more likely to be flagged (except weakly for SINBAR); a high le
 with more Montreal/RAI calls, consistent with raised tone lifting even the quietest seconds
 (CAP RBD 0.80 vs 0.47-0.60 uV in the other CAP patients).
 
-## F2d Within MGH: apnoea, artefact and age (T13, T14, T4)
+## F2d Within MGH: apnea, artifact and age (T13, T14, T4)
 
 % positive by AHI (n = 132 / 276 / 387 / 130 nights):
 
@@ -115,13 +115,13 @@ with more Montreal/RAI calls, consistent with raised tone lifting even the quiet
 | RAI, all REM | 6 | 9 | 8 | 12 |
 | RAI, event-free REM | 6 | 9 | 7 | 7 |
 
-The apnoea gradient is carried entirely by epochs with events; without them it vanishes,
-and MGH patients without apnoea are still flagged at ~21-24% (Montreal) and ~65-69%
+The apnea gradient is carried entirely by epochs with events; without them it vanishes,
+and MGH patients without apnea are still flagged at ~21-24% (Montreal) and ~65-69%
 (SINBAR), against HMC's 9% and 25%.
 
-By residual heartbeat artefact (tertile medians of the ratio after removal 1.01 / 1.08 /
+By residual heartbeat artifact (tertile medians of the ratio after removal 1.01 / 1.08 /
 1.38): Montreal 40 / 28 / 21%, RAI 17 / 7 / 3%, SINBAR 75 / 70 / 84%. No consistent
-artefact effect (the ratio is itself lower when genuine EMG is higher). By age (<40, 40-60,
+artifact effect (the ratio is itself lower when genuine EMG is higher). By age (<40, 40-60,
 >60 y): Montreal 28 / 29 / 31%, SINBAR 76 / 78 / 74%, RAI 11 / 8 / 9%.
 
 ## F2f Does our automated scoring reproduce published values?
@@ -140,7 +140,7 @@ The automated measures reproduce the published RBD levels for "any" and tonic ac
 (phasic is higher), but patients without RBD score three to five times higher than the
 published controls - the false-positive problem sits in the non-RBD distribution, which is
 where a low noise floor lets small twitches cross a background-relative threshold. (Our
-controls are not Frauscher's: theirs were treated sleep-apnoea patients recorded with the
+controls are not Frauscher's: theirs were treated sleep-apnea patients recorded with the
 full SINBAR montage and scored visually.) Montplaisir 2010 reports classification rates
 (81.9% tonic, 83.8% phasic; 80 iRBD v 80 controls) rather than group means.
 
@@ -187,7 +187,7 @@ AUC, CAP RBD (n=22) vs same-system CAP patients:
 - The lowest references (minimum, p5, p10 of REM) separate RBD best; higher percentiles
   move the reference into RBD's own excess activity and separation collapses (tonic AUC
   ~0.5 at p50).
-- MGH > HMC under every definition, so the site gap is not an artefact of this choice.
+- MGH > HMC under every definition, so the site gap is not an artifact of this choice.
 
 ## F4 Re-derived cut-offs, validated
 
@@ -220,7 +220,7 @@ cut-offs; nights >= 10 min REM. CAP RBD and CAP patients = main system (512 Hz, 
 
 Share flagged positive (%) at each step; median quiet-REM level (uV) in brackets:
 
-| group | as recorded | +0.5 | +1.0 | +1.5 | +2.0 | +3.0 uV | harmonised 1.5 | harmonised 2.0 |
+| group | as recorded | +0.5 | +1.0 | +1.5 | +2.0 | +3.0 uV | harmonized 1.5 | harmonized 2.0 |
 |---|---|---|---|---|---|---|---|---|
 | CAP RBD (n=21) level | 0.86 | 0.99 | 1.31 | 1.71 | 2.13 | 3.02 | 1.50 | 2.00 |
 | - Montreal | 90 | 86 | 71 | 57 | 52 | 19 | 57 | 57 |
@@ -243,22 +243,22 @@ Share flagged positive (%) at each step; median quiet-REM level (uV) in brackets
 
 | # | criterion | result | verdict |
 |---|---|---|---|
-| 1 | harmonised to 2.0 uV, MGH - HMC <= 3 (Montreal) / <= 5 (SINBAR) points | Montreal 9 [6-13] vs 8 [5-14]: +0.8; SINBAR 22 [18-28] vs 17 [12-24]: +5.5 (as recorded: +25.1 and +57.9) | met for Montreal; narrowly missed for SINBAR (90% of the gap removed) |
+| 1 | harmonized to 2.0 uV, MGH - HMC <= 3 (Montreal) / <= 5 (SINBAR) points | Montreal 9 [6-13] vs 8 [5-14]: +0.8; SINBAR 22 [18-28] vs 17 [12-24]: +5.5 (as recorded: +25.1 and +57.9) | met for Montreal; narrowly missed for SINBAR (90% of the gap removed) |
 | 2 | MGH's ladder at HMC's own level (1.52 uV) within 3 / 5 points of HMC | Montreal 8.9 vs 8.8 (+0.1); SINBAR 29.2 vs 25.2 (+4.1); RAI 10.4 vs 7.5 | met |
 | 3 | RBD sensitivity < 70% at 2.0 uV = noisier systems miss RBD | Montreal 57%; SINBAR 86%; RAI 52% | supported (Montreal) |
-| 4 | remedy: harmonise to 2.0 uV, re-derive on CAP; gap <= 5 and LOO sens >= 80% | Montreal phasic cut 5.4%: LOO 76%, MGH 21 [8-47] vs HMC 10 [5-16]; Montreal tonic cut 1.5%: LOO 71%, 40 vs 19; SINBAR any cut 13.7%: LOO 90%, 30 vs 20 | not met: harmonisation plus re-derivation is not a working remedy |
+| 4 | remedy: harmonize to 2.0 uV, re-derive on CAP; gap <= 5 and LOO sens >= 80% | Montreal phasic cut 5.4%: LOO 76%, MGH 21 [8-47] vs HMC 10 [5-16]; Montreal tonic cut 1.5%: LOO 71%, 40 vs 19; SINBAR any cut 13.7%: LOO 90%, 30 vs 20 | not met: harmonization plus re-derivation is not a working remedy |
 | 5 | HMC/MGH EEG 40-90 Hz floor >= 1.5 = system-wide | EEG N2/N3 floor: CAP 0.16 [0.15-0.20], MGH 0.23 [0.22-0.25], HMC 0.46 [0.41-0.82]; ratio 1.98 | met: HMC's system is noisier on EEG too |
 | 6 | dropping transitional REM epochs changes the Montreal gap by < 3 points | Montreal gap +20 -> +16; SINBAR +51 -> +52; RAI +1 -> +1 | narrowly not met: REM-boundary epochs carry ~4 of the 20 Montreal points, none of SINBAR's |
 
 Notes:
-- Without harmonisation, the cut-offs re-derived on CAP (as in T10) give, on these 300 MGH
+- Without harmonization, the cut-offs re-derived on CAP (as in T10) give, on these 300 MGH
   nights: Montreal phasic 27.7% -> MGH 9%, HMC 5% (gap +5); Montreal tonic 32.2% -> 16% vs
   7%; SINBAR any 62.9% -> 16% vs 1%.
-- Why the remedy fails: harmonising to 2 uV makes MGH and HMC agree under the published
+- Why the remedy fails: harmonizing to 2 uV makes MGH and HMC agree under the published
   cut-offs (Montreal 9 vs 8%) but costs RBD sensitivity (Montreal 90 -> 57%). Re-deriving
-  cut-offs on the harmonised CAP data to win sensitivity back pushes them very low (1.5-14%),
+  cut-offs on the harmonized CAP data to win sensitivity back pushes them very low (1.5-14%),
   into the part of the distributions where the two sites still differ.
-- MGH's EEG floor (0.23 uV) is near its 1-uV quantisation noise in that band (~0.2 uV), so
+- MGH's EEG floor (0.23 uV) is near its 1-uV quantization noise in that band (~0.2 uV), so
   its amplifier noise may be lower still; the HMC/MGH ratio is then a lower bound.
 - The CAP healthy group (mixed hardware; 12 with physical units) is not used for criteria.
 

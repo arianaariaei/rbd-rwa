@@ -8,7 +8,7 @@ without atonia do not transfer across recording sites - an open multi-cohort ana
 All recordings come from openly licensed databases that require no application,
 credential or data-use agreement (Table 1).
 
-| Cohort | Source | Nights | Population | Chin EMG | Licence |
+| Cohort | Source | Nights | Population | Chin EMG | License |
 |---|---|---|---|---|---|
 | CAP | CAP Sleep Database, PhysioNet (Terzano et al. 2001) | 108 | 22 clinical RBD, 16 healthy, 40 NFLE, 10 PLM, 9 insomnia, 5 narcolepsy, 4 SDB, 2 bruxism (Parma, Italy) | 100-512 Hz, several systems | ODC-By 1.0 |
 | HMC | Haaglanden Medisch Centrum sleep staging database v1.1, PhysioNet | 151 | Patients referred for PSG for mixed sleep complaints (The Netherlands) | 256 Hz | CC BY 4.0 |
@@ -22,7 +22,7 @@ one without chin EMG). Because amplitude-based measures are sensitive to acquisi
 hardware, RBD patients were compared primarily with the other CAP patients recorded on
 the same system (512 Hz, microvolts; "same-system patients"), and the healthy group is
 reported separately. HMC and MGH provide large clinical reference populations in which
-RBD is not labelled; given its prevalence in sleep-clinic populations, nearly all
+RBD is not labeled; given its prevalence in sleep-clinic populations, nearly all
 positive calls in these cohorts are expected to be false positives.
 
 This is a retrospective analysis of pre-existing open databases. CAP does not state the
@@ -48,7 +48,7 @@ band-pass, adaptive threshold, refractory period 0.3 s) and subtracting a median
 heartbeat template, estimated in 5-minute blocks from -100 to +150 ms around each
 R-peak, from the filtered chin signal. The effect was quantified as the ratio of the
 median chin amplitude at the R-peak to that 300-500 ms before it (heartbeat-locked
-ratio; 1.0 = no artefact).
+ratio; 1.0 = no artifact).
 
 The filtered signal was reduced to RMS and mean-rectified amplitude in bins of exactly
 20 ms. To allow amplitude comparisons across recordings made with different
@@ -76,7 +76,7 @@ Four published approaches were implemented on the same REM epochs (Table 2).
 | Cut-off | tonic >=30% or phasic >=15% | any >=18.2% | none published | RAI <0.8 |
 
 The visual methods define activity relative to "background" EMG, which human scorers
-judge by eye. Here background was operationalised as the 5th percentile of 1-s RMS
+judge by eye. Here background was operationalized as the 5th percentile of 1-s RMS
 amplitudes within REM (NREM for the AASM tonic criterion); the sensitivity of results
 to this choice is examined in Section 2.6. We refer to this per-night value as the
 night's quiet-REM level. Where physical units were unavailable, the absolute (uV)
@@ -86,7 +86,7 @@ criteria were not applied.
 
 For each method and group we report the share of nights classified positive by the
 published cut-off with 95% Wilson intervals: sensitivity in CAP RBD, false-positive
-rate elsewhere. Discrimination of the continuous scores was summarised by the area
+rate elsewhere. Discrimination of the continuous scores was summarized by the area
 under the ROC curve for RBD versus same-system patients. Agreement between methods was
 assessed with Cohen's kappa. In MGH, the association of age, sex and apnea-hypopnea
 index with a positive call was estimated by logistic regression, and the effect of
@@ -95,7 +95,7 @@ values for screening were computed from the sensitivity in CAP RBD and the speci
 in the pooled external cohorts across RBD prevalences of 1-10%.
 
 To ask whether automated scoring needs its own cut-offs, each continuous score was
-given a new cut-off maximising Youden's index for CAP RBD versus same-system patients,
+given a new cut-off maximizing Youden's index for CAP RBD versus same-system patients,
 and the share of MGH and HMC nights above it was recorded. Because this re-uses the
 22 RBD patients, the cut-offs were validated by leave-one-out cross-validation (the
 cut-off re-derived without the held-out night) and their uncertainty by 2,000 bootstrap
@@ -119,11 +119,11 @@ NREM definition throughout.
 1 unit/uV), while HMC stores it at 256 Hz in steps of 0.024 uV (16 bits over
 +/-800 uV). To isolate what that storage
 format can do on its own, every HMC recording was passed through the pipeline again
-after its chin EMG had been (i) quantised to 1-uV steps, and (ii) additionally
+after its chin EMG had been (i) quantized to 1-uV steps, and (ii) additionally
 resampled to 200 Hz (polyphase filtering). Because the median quiet-REM level is lower
 in MGH (0.59 uV) than in HMC (1.52 uV), both were repeated after first scaling the HMC
-signal by 0.39, which places it where MGH sits relative to the quantisation step; the
-scaled signal without quantisation served as that comparison's reference. Each copy of
+signal by 0.39, which places it where MGH sits relative to the quantization step; the
+scaled signal without quantization served as that comparison's reference. Each copy of
 HMC was processed exactly like the original cohorts.
 
 *Noise floor.* The reverse manipulation tested whether the lower quiet-REM level of MGH
@@ -140,11 +140,11 @@ Because band-pass filtering and heartbeat subtraction are linear, each night's c
 one track of unit white noise (seeded by record name) were filtered once, and noisy copies
 were formed by adding the filtered noise scaled to an in-band RMS of 0.5, 1.0, 1.5, 2.0
 and 3.0 uV - the same noise draw at every level (common random numbers). Two further copies
-were *harmonised*: the added noise was chosen, by iteration, to bring the night's
+were *harmonized*: the added noise was chosen, by iteration, to bring the night's
 quiet-REM level to 1.5 and to 2.0 uV (within 1%); nights already above a target were left
 unchanged. Every copy was scored with every method. The criteria for interpreting this
 analysis - including when the noise floor would be judged to account for the site
-difference, and when harmonisation would be judged a working remedy - were written down
+difference, and when harmonization would be judged a working remedy - were written down
 and committed to the repository before it was run (Supplement S1).
 
 *Independent estimate of system noise.* In the same pass, the 40-90 Hz floor (5th
@@ -209,13 +209,13 @@ request-free cohorts were processed with the unchanged pipeline after the predic
 been committed (Supplement S3): BOAS (OpenNeuro ds005555, CC0; 128 nights of 100 adults
 recruited from the general population without psychotropic medication or severe disease;
 Micromed SD plus, bipolar chin EMG at 256 Hz; consensus AASM stages of three scorers),
-DOD-O (Dreem Open Datasets, Zenodo 15900394, MIT licence; 55 patients with suspected
+DOD-O (Dreem Open Datasets, Zenodo 15900394, MIT license; 55 patients with suspected
 sleep-disordered breathing at the Stanford Sleep Medicine Center; Somnomedics Somno HD) and
 DOD-H (same release; 25 healthy volunteers, French Armed Forces Biomedical Research Institute;
 Compumedics Siesta); both Dreem sets provide chin EMG and ECG at 250 Hz and consensus stages of
 five scorers. BOAS has no ECG channel; heartbeats were searched for on the chin EMG itself
 with the same detector and plausibility test, and removed only where they passed it. For
-BOAS, each participant's first recording was analysed (all 128 nights as a sensitivity
+BOAS, each participant's first recording was analyzed (all 128 nights as a sensitivity
 analysis). Six predictions were fixed in advance: comparable muscle scale (net N2/N3 level
 within 0.67-1.5 times MGH's), at least 30% of healthy nights flagged by the published SINBAR
 criterion on systems with a floor below 1 uV, agreement between healthy cohorts once the

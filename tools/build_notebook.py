@@ -41,7 +41,7 @@ def main():
 Everything runs in the cloud; nothing is downloaded to your computer. Every
 dataset used here is open (no application, no credential):
 
-| cohort | what | licence |
+| cohort | what | license |
 |---|---|---|
 | CAP | 22 RBD patients + healthy sleepers + other sleep disorders (Italy) | ODC-By |
 | HMC | 151 clinical PSGs, Haaglanden Medisch Centrum (Netherlands) | CC BY 4.0 |
@@ -89,7 +89,7 @@ os.environ['RBD_DURABLE_DIR'] = '{WORK_DIR}'
         md("""
 ## 4. Hardware simulation: HMC recorded the way MGH records chin EMG
 
-The same 151 HMC nights again, quantised to 1 uV steps (`hmc_q1uv`), and also
+The same 151 HMC nights again, quantized to 1 uV steps (`hmc_q1uv`), and also
 resampled to 200 Hz (`hmc_mgh`), as the MGH chin EMG is stored. MGH's quiet
 REM level (~0.6 uV) is below that step while HMC's (~1.5 uV) is above it, so
 both are repeated after scaling HMC down to the MGH level (`hmc_low`,

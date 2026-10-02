@@ -17,7 +17,7 @@ External cohorts (paper/preregistration_external.md):
           chin EMG at 256 Hz, no ECG. Spain, 50 Hz.
   dodh    Dreem Open Dataset, healthy (Zenodo 15900394, MIT). 25 healthy
           volunteers, Compumedics Siesta, 250 Hz. France, 50 Hz.
-  dodo    Dreem Open Dataset, obstructive sleep apnoea (same). 55 patients,
+  dodo    Dreem Open Dataset, obstructive sleep apnea (same). 55 patients,
           Somnomedics Somno HD, 250 Hz. Stanford, USA, 60 Hz.
 
 A cohort adapter knows how to list records, fetch one record's files into
@@ -236,7 +236,7 @@ class HMC:
 class HMCDegraded(HMC):
     """
     HMC recordings re-acquired, in software, the way the MGH chin EMG was:
-    optionally scaled by `gain`, resampled to `fs_out` and quantised to
+    optionally scaled by `gain`, resampled to `fs_out` and quantized to
     `lsb_uv` microvolt steps. MGH stores chin EMG at 200 Hz with 1 uV
     resolution, and its quiet-REM level (~0.6 uV) is below that step; HMC's is
     ~1.5 uV. Scaling HMC down to the MGH level first puts the signal where the
@@ -291,7 +291,7 @@ class BOAS:
     the general population, one or more nights each (participants.tsv 'pid'),
     Micromed SD plus PSG, bipolar chin EMG at 256 Hz, consensus AASM stages of
     three scorers in the events file (0 W, 1 N1, 2 N2, 3 N3, 4 REM; 8 and -2 =
-    disconnection / artefact). There is no ECG channel: heartbeats are found
+    disconnection / artifact). There is no ECG channel: heartbeats are found
     on the chin EMG itself (see `_beats`).
     """
     name, mains = "boas", 50.0
@@ -390,7 +390,7 @@ class _RangeFile(io.RawIOBase):
 
 class DOD:
     """
-    Dreem Open Datasets (Zenodo 15900394, MIT licence): one h5 file per night
+    Dreem Open Datasets (Zenodo 15900394, MIT license): one h5 file per night
     inside a zip per dataset, with signals/eeg/*, signals/emg/* and ECG in uV at
     250 Hz and a consensus hypnogram of five scorers (-1 not scored, 0 W, 1 N1,
     2 N2, 3 N3, 4 REM). A record's member is fetched with parallel byte-range
@@ -527,7 +527,7 @@ def extract_pack(cohort, rec, d, demo=None):
 # ══════════════════════════════════════════════════════════════════════════════
 
 LADDER_UV = (0.5, 1.0, 1.5, 2.0, 3.0)   # in-band RMS of the added noise, uV
-TARGETS_UV = (1.5, 2.0)                 # quiet-REM level after harmonisation, uV
+TARGETS_UV = (1.5, 2.0)                 # quiet-REM level after harmonization, uV
 EEG_BAND = (40.0, 90.0)                 # where EEG is mostly the system's own noise
 
 

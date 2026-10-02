@@ -7,14 +7,15 @@ target (h150, h200 = 1.5 and 2.0 uV). This scores every copy with every method
 and reports, against the criteria fixed in paper/preregistration_noise_ladder.md:
 
   L1  dose-response: quiet-REM level and share flagged, per group and step
-  L2  matched floor: MGH against HMC after harmonising both (criteria 1, 2)
+  L2  matched floor: MGH against HMC after harmonizing both (criteria 1, 2)
   L3  RBD sensitivity as the floor rises (criterion 3)
-  L4  the remedy: cut-offs re-derived on harmonised CAP, leave-one-out and
-      bootstrap, applied to harmonised MGH and HMC (criterion 4)
+  L4  the remedy: cut-offs re-derived on harmonized CAP, leave-one-out and
+      bootstrap, applied to harmonized MGH and HMC (criterion 4)
   L5  the recording systems' own noise, measured on EEG (criterion 5)
 
     python run_ladder.py   -> results/ladder_scores.csv, results/ladder_report.md,
                               figures/fig6_noise_ladder, figures/fig7_harmonisation
+    python run_ladder.py --from-csv   the same from results/ladder_scores.csv
 """
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -97,8 +98,12 @@ def pct(v):
 
 
 def main():
-    df = load_scores()
-    df.to_csv(config.RESULTS / "ladder_scores.csv", index=False)
+    if "--from-csv" in sys.argv:
+        # report and figures again from the saved scores (no ladder packs needed)
+        df = pd.read_csv(config.RESULTS / "ladder_scores.csv")
+    else:
+        df = load_scores()
+        df.to_csv(config.RESULTS / "ladder_scores.csv", index=False)
     base = df[df.rem_minutes >= MIN_REM]
     lines = []
     say = lambda s="": (print(s), lines.append(s))
@@ -152,7 +157,7 @@ def main():
 
     # L4 ─────────────────────────────────────────────────────────────────────
     say("L4  Remedy: cut-offs re-derived on CAP, applied to MGH and HMC, with and without")
-    say("    harmonising every night to 2.0 uV (criterion 4 for Montreal phasic/tonic and")
+    say("    harmonizing every night to 2.0 uV (criterion 4 for Montreal phasic/tonic and")
     say("    SINBAR any: |FP MGH - FP HMC| <= 5 points and leave-one-out sensitivity >= 80%)")
     rng = np.random.default_rng(0)
     remedy = []
@@ -242,7 +247,7 @@ def figures(base, remedy):
     if rem.empty:
         return
     fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.9), layout="constrained")
-    # A: published cut-offs, as recorded vs harmonised
+    # A: published cut-offs, as recorded vs harmonized
     ax = axes[0]
     groups = ["CAP RBD", "MGH", "HMC"]
     for j, (m, step, hatch) in enumerate([("Montreal", "native", ""), ("Montreal", TARGET, "//"),
@@ -250,13 +255,13 @@ def figures(base, remedy):
         vals = [100 * base[(base.who == w) & (base.step == step) & (base.method == m)].y.mean()
                 for w in groups]
         ax.bar(np.arange(3) + (j - 1.5) * 0.2, vals, width=0.19, color=COLOR[m], hatch=hatch,
-               edgecolor="white", label=f"{m}, {'as recorded' if step == 'native' else 'harmonised 2 µV'}")
+               edgecolor="white", label=f"{m}, {'as recorded' if step == 'native' else 'harmonized 2 µV'}")
     ax.set_xticks(range(3), groups)
     ax.set_ylabel("nights flagged positive (%)")
     ax.set_ylim(0, 100)
     ax.legend(frameon=False, fontsize=6, loc="upper right")
     ax.set_title("A  Published cut-offs")
-    # B: re-derived cut-offs on harmonised data: external false positives
+    # B: re-derived cut-offs on harmonized data: external false positives
     ax = axes[1]
     k = rem[(rem.step == TARGET) & rem.apply(lambda r: (r.method, r.metric) in KEY, axis=1)]
     for i, r in enumerate(k.itertuples()):
@@ -271,7 +276,7 @@ def figures(base, remedy):
     top = max(max(r.ci_mgh[1], r.ci_hmc[1]) for r in k.itertuples())
     ax.set_ylim(0, max(30, 100 * top + 5))
     ax.legend(frameon=False, fontsize=6.5)
-    ax.set_title("B  Re-derived on harmonised CAP")
+    ax.set_title("B  Re-derived on harmonized CAP")
     save(fig, "fig7_harmonisation")
 
 

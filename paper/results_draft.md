@@ -14,8 +14,8 @@ in HMC.
 
 ## 3.2 How often the published cut-offs call a night positive
 
-The Montreal and SINBAR cut-offs recognised almost all CAP RBD patients (91% [72-97] and
-95% [78-99]); the RAI recognised about half (55% [35-73]) (Fig. 1, T2). The same cut-offs
+The Montreal and SINBAR cut-offs recognized almost all CAP RBD patients (91% [72-97] and
+95% [78-99]); the RAI recognized about half (55% [35-73]) (Fig. 1, T2). The same cut-offs
 flagged many patients without RBD, at rates that depended on the cohort more than on the
 method. Among CAP patients with other sleep disorders recorded on the same system, the
 Montreal criteria flagged 22% of those with NFLE, 40% with PLM, 22% with insomnia and 60%
@@ -31,17 +31,17 @@ SINBAR-RAI 0.04); in HMC, where few nights were positive, on 22% (0.36, 0.73, 0.
 in CAP RBD they disagreed on 41% of nights, mostly because the RAI missed patients whom
 the other two methods flagged.
 
-## 3.4 Sleep apnoea, age and sex in MGH
+## 3.4 Sleep apnea, age and sex in MGH
 
-In MGH, each additional 10 apnoea-hypopnoea events per hour raised the odds of a positive
+In MGH, each additional 10 apnea-hypopnea events per hour raised the odds of a positive
 call by 16-21% (Montreal OR 1.16 [1.05-1.28]; SINBAR 1.19 [1.05-1.35]; RAI 1.21
 [1.05-1.39]; T4). Age was not associated with a Montreal or RAI call and weakly with a
 SINBAR call (OR 0.89 [0.79-0.99] per decade); men were more often SINBAR-positive (OR 1.43
 [1.04-1.97]). Removing REM epochs that contained a scored respiratory event or arousal
 lowered the positive share modestly (Montreal 28% to 22%; SINBAR 75% to 68%; RAI
-unchanged; T5) and removed the apnoea gradient entirely: in event-free REM the Montreal
+unchanged; T5) and removed the apnea gradient entirely: in event-free REM the Montreal
 positivity was 21%, 20%, 24% and 19% for AHI <5, 5-15, 15-30 and >=30 (T13). MGH patients
-without sleep apnoea (AHI <5, n=132) were still flagged at 21-24% by the Montreal and
+without sleep apnea (AHI <5, n=132) were still flagged at 21-24% by the Montreal and
 65-69% by the SINBAR criteria.
 
 ## 3.5 The site difference is not produced by amplitude or recording format
@@ -53,17 +53,17 @@ RBD patients had a higher level (0.80 [0.61-1.22]) than CAP patients with other 
 recorded on the same system (medians 0.47-0.60).
 
 Re-recording HMC in MGH's format in software did not reproduce MGH's positivity (T12,
-Fig. 2B). Quantising HMC to 1-uV steps and resampling it to 200 Hz left the Montreal
+Fig. 2B). Quantizing HMC to 1-uV steps and resampling it to 200 Hz left the Montreal
 positivity at 9% (SINBAR 25% to 22%; RAI 7% to 7%). Scaling HMC down to MGH's quiet-REM
 level (x0.39; median 0.59 uV) left the relative criteria unchanged (Montreal 8%, SINBAR
 25%) and lowered the RAI (7% to 3%), as expected for an index built on absolute
-amplitude; quantising and resampling the scaled signal, which places HMC exactly where
+amplitude; quantizing and resampling the scaled signal, which places HMC exactly where
 MGH sits relative to the storage step, changed little (Montreal 8%, SINBAR 20%, RAI 3%).
 
-Residual cardiac artefact did not explain the site difference either: after template
+Residual cardiac artifact did not explain the site difference either: after template
 subtraction the heartbeat-locked ratio fell from 1.92 to 1.08 in MGH (p90 5.13 to 1.53),
 from 1.26 to 1.01 in HMC and from 1.34 to 1.03 in CAP (T8), and MGH nights with more
-residual artefact were not more often positive under the Montreal or RAI criteria (T14).
+residual artifact were not more often positive under the Montreal or RAI criteria (T14).
 
 ## 3.6 A higher noise floor turns MGH into HMC
 
@@ -93,7 +93,7 @@ without RBD: in MGH from 34% to 23%, 15%, 9%, 8% and 6% (Montreal) and from 83% 
 44%, 29%, 22% and 13% (SINBAR) as the quiet-REM level rose from 0.56 to 2.84 uV. MGH's curve
 passed through HMC's own point: read at HMC's median level (1.52 uV), MGH would be flagged
 at 8.9% by the Montreal criteria (HMC 8.8%) and 29.2% by SINBAR (HMC 25.2%). After every
-night of both cohorts was harmonised to a quiet-REM level of 2.0 uV, the Montreal criteria
+night of both cohorts was harmonized to a quiet-REM level of 2.0 uV, the Montreal criteria
 flagged 9% [6-13] of MGH and 8% [5-14] of HMC nights (difference +0.8 points, against +25.1
 as recorded) and SINBAR 22% [18-28] and 17% [12-24] (+5.5, against +57.9). By the criteria
 fixed in advance, the noise floor accounted for the site difference under the Montreal
@@ -119,9 +119,9 @@ Re-scoring every night with six definitions of background moved the share of MGH
 flagged by the Montreal criteria from 13% (median of REM) to 47% (minimum of REM), and by
 SINBAR from 45% to 91% (Fig. 3). The ordering of cohorts was the same under every
 definition - MGH and CAP's other patients close together, HMC lowest - so the site
-difference is not an artefact of the definition. Separation of RBD from other CAP
+difference is not an artifact of the definition. Separation of RBD from other CAP
 patients was best with low references (AUC 0.85-0.88 for the phasic measures at the 5th
-percentile of REM) and collapsed towards chance as the reference approached the median
+percentile of REM) and collapsed toward chance as the reference approached the median
 (tonic AUC 0.47-0.51).
 
 ## 3.9 What this means for screening
@@ -134,7 +134,7 @@ and 41% (T6). The same criteria gave different values at each hospital: at 2% pr
 the RAI gave 11% and 13%. Because CAP's patients have established RBD, these values are
 upper bounds for a screening population.
 
-## 3.10 Cut-offs re-derived for automated scoring, with and without harmonisation
+## 3.10 Cut-offs re-derived for automated scoring, with and without harmonization
 
 Re-deriving each cut-off on CAP (Youden's index, 21 RBD patients against 51 patients on
 the same system) raised the relative-criteria thresholds (Montreal phasic 15% to 27.7%;
@@ -145,10 +145,10 @@ CAP (T10). The cut-offs were imprecise: across 2,000 bootstrap re-derivations th
 "any" threshold ranged from 62.9% to 80.4% and the Montreal phasic threshold from 19.7% to
 29.3%, with MGH false-positive shares of 3-10% and 7-17%.
 
-Harmonising every night to a quiet-REM level of 2.0 uV before re-deriving the cut-offs did
-not make them portable (pre-specified criterion 4, Fig. 7). Harmonisation alone made MGH
+Harmonizing every night to a quiet-REM level of 2.0 uV before re-deriving the cut-offs did
+not make them portable (pre-specified criterion 4, Fig. 7). Harmonization alone made MGH
 and HMC agree under the published cut-offs, but at the cost of sensitivity (Montreal 57%).
-Re-deriving cut-offs on the harmonised CAP data to recover it drove them very low (Montreal
+Re-deriving cut-offs on the harmonized CAP data to recover it drove them very low (Montreal
 phasic 5.4%, tonic 1.5%, SINBAR "any" 13.7%), with leave-one-out sensitivity of 71-90% and
 reopened site gaps: MGH 21% vs HMC 10% (Montreal phasic), 40% vs 19% (Montreal tonic) and
 30% vs 20% (SINBAR "any"), with wide bootstrap intervals.
@@ -164,7 +164,7 @@ The pre-specified floor-corrected (FC) rules (Methods 2.7; B = 1.0 uV) removed t
 dependence on noise (Fig. 8A-B). On the same 280 MGH nights, raising the floor to HMC's
 1.5 uV lowered positivity under the published Montreal criteria from 33.9% to 11.9% (61
 nights changed) but left Montreal-FC at 21.3% (no night changed); SINBAR fell from 83.0% to
-33.2% (138 nights), SINBAR-FC moved from 48.7% to 50.5% (5 nights, all towards positive). In
+33.2% (138 nights), SINBAR-FC moved from 48.7% to 50.5% (5 nights, all toward positive). In
 CAP's RBD patients, Montreal sensitivity fell from 90% to 57% with the published rule and
 stayed at 81% with FC; SINBAR-FC stayed at 95%. Both FC rules were flat up to a floor of
 about 2 uV; beyond it the guard against counting noise takes over and positivity falls,
@@ -211,7 +211,7 @@ predictions had been committed (Methods 2.8; Fig. 9). BOAS - 99 adults from the 
 population, without psychotropic medication - was recorded on the quietest system in the
 study (median floor 0.37 uV [0.28-0.49]). On it, the published criteria flagged most healthy
 volunteers: SINBAR 91% [84-95] and Montreal 41% [32-51] (96% and 58% in those aged 50 or
-over). This was not heartbeat artefact: BOAS has no ECG channel, but in the 80 nights whose
+over). This was not heartbeat artifact: BOAS has no ECG channel, but in the 80 nights whose
 REM envelope repeated at the heart rate no more than MGH's after removal, positivity was the
 same (SINBAR 92%, Montreal 44%); in the cohorts with ECG, leaving the heartbeat in changed
 the published rules by at most 7 points. Floor-corrected, BOAS positivity fell to 35% [27-45]

@@ -14,7 +14,7 @@ instead of multiplying it; and a test on three further systems (177 nights: heal
 clinic patients).
 
 **Results:** Published cut-offs flagged 29% (Montreal) and 76% (SINBAR) of MGH patients but
-9% and 25% of HMC patients. Format, amplitude, apnoea and age did not explain the gap;
+9% and 25% of HMC patients. Format, amplitude, apnea and age did not explain the gap;
 raising MGH's noise floor to HMC's reproduced it (8.9% vs 8.8%), and noisier floors cost
 RBD sensitivity (Montreal 90% to 57%). Floor-corrected criteria were unaffected by added
 noise, closed the gap (Montreal +20.5 to +1.6 points; SINBAR +51.0 to +2.4) and kept SINBAR
@@ -25,3 +25,4 @@ no longer followed the recording's floor (Spearman rho -0.83 to +0.43).
 **Conclusions:** Background-relative RWA criteria measure the recording's noise floor as
 much as the patient. Thresholds should be defined against the noise floor, not in
 multiples of it, and reported with it.
+

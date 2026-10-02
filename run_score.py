@@ -9,7 +9,7 @@ and prints three summaries:
      a hardware contrast - and against CAP patients recorded on the same
      system as the RBD group (512 Hz, microvolts), the fair comparison.
   2. How many people WITHOUT known RBD each method's published cut-off flags,
-     per cohort: the false-positive burden a screening programme would face.
+     per cohort: the false-positive burden a screening program would face.
   3. The spread of each metric per cohort (median, 90th, 95th percentile).
 
     python run_score.py

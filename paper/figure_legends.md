@@ -4,7 +4,7 @@
 Points are the percentage of nights classified positive, with 95% Wilson intervals, for the
 Montreal (tonic >= 30% of 20-s epochs or phasic >= 15% of 2-s mini-epochs), SINBAR (chin
 "any" activity >= 18.2% of 3-s mini-epochs) and REM Atonia Index (< 0.8) criteria, applied
-by the same automated pipeline. CAP RBD: patients with REM sleep behaviour disorder; CAP
+by the same automated pipeline. CAP RBD: patients with REM sleep behavior disorder; CAP
 patients: CAP patients with other sleep disorders recorded on the same system as the RBD
 patients (512 Hz); CAP healthy: healthy volunteers (recorded on other systems); MGH:
 Massachusetts General Hospital clinical cohort (PhysioNet Challenge 2018); HMC:
@@ -16,7 +16,7 @@ the other groups it is the false-positive rate if none of them has RBD.
 REM sleep, the reference against which the relative criteria judge activity - by group
 (log scale; boxes: median and interquartile range; whiskers: 1.5 IQR). The dashed line is
 the 1-uV step in which MGH stores chin EMG. (B) Share of nights flagged positive (95%
-Wilson intervals) in HMC as recorded; HMC quantised to 1-uV steps; HMC quantised and
+Wilson intervals) in HMC as recorded; HMC quantized to 1-uV steps; HMC quantized and
 resampled to 200 Hz (MGH's storage format); HMC scaled by 0.39 to MGH's median quiet-REM
 level; the scaled signal in MGH's storage format; MGH as recorded (all nights); and MGH
 with 1.5 uV of added white noise, which raises its quiet-REM level to HMC's (the first 300
@@ -34,7 +34,7 @@ AASM tonic criterion keeps its NREM reference throughout and is not shown.
 **Figure 4. Published and re-derived cut-offs against each group's distribution.**
 (A) Montreal phasic activity (% of 2-s mini-epochs; the phasic criterion alone) and (B)
 SINBAR "any" activity (% of 3-s mini-epochs), one point per night. Dashed line: published cut-off; solid line: cut-off
-re-derived for automated scoring by maximising Youden's index for CAP RBD against CAP
+re-derived for automated scoring by maximizing Youden's index for CAP RBD against CAP
 patients recorded on the same system. Beneath each group: share of nights flagged by the
 published and by the re-derived cut-off.
 
@@ -48,24 +48,24 @@ often.
 Share of nights flagged positive by each method's published cut-off as white noise is
 added to the chin EMG (0.5, 1.0, 1.5, 2.0 and 3.0 uV in-band RMS), plotted against the
 group's median quiet-REM level (log scale). Filled circles: as recorded; open circles:
-noise added; stars: every night harmonised to a quiet-REM level of 2.0 uV. CAP RBD and CAP
+noise added; stars: every night harmonized to a quiet-REM level of 2.0 uV. CAP RBD and CAP
 patients were recorded on CAP's main system (512 Hz); MGH: the first 300 Challenge 2018
 records; HMC: all nights. Read at HMC's own level (1.52 uV), MGH's curve reaches HMC's
 positivity (Montreal 8.9% vs 8.8%). The analysis and its decision criteria were specified
 before it was run.
 
-**Figure 7. Harmonising the noise floor is not a remedy.**
-(A) Published cut-offs, as recorded and with every night harmonised to a quiet-REM level of
-2.0 uV: harmonisation brings MGH and HMC together but lowers RBD sensitivity (Montreal 90%
-to 57%). (B) Cut-offs re-derived on harmonised CAP data (Youden's index, RBD vs same-system
-patients) and applied to harmonised MGH and HMC: share of external nights flagged, with 95%
+**Figure 7. Harmonizing the noise floor is not a remedy.**
+(A) Published cut-offs, as recorded and with every night harmonized to a quiet-REM level of
+2.0 uV: harmonization brings MGH and HMC together but lowers RBD sensitivity (Montreal 90%
+to 57%). (B) Cut-offs re-derived on harmonized CAP data (Youden's index, RBD vs same-system
+patients) and applied to harmonized MGH and HMC: share of external nights flagged, with 95%
 intervals from 2,000 bootstrap re-derivations, and leave-one-out sensitivity on CAP. The
 low re-derived thresholds reopen the difference between the hospitals.
 
 **Figure 8. Floor-corrected criteria.** (A, B) Share of nights flagged by the published
 criteria (dotted) and the floor-corrected criteria (solid; reference background 1.0 uV) as
 white noise is added to the same nights (noise ladder), plotted against the median quiet-REM
-level: CAP RBD (red, n = 21), CAP patients on the same system (grey, n = 51), MGH (blue,
+level: CAP RBD (red, n = 21), CAP patients on the same system (gray, n = 51), MGH (blue,
 n = 280) and HMC (purple, n = 147). Floor-corrected verdicts do not change until the floor
 exceeds about 2 uV, where small activity can no longer be told from noise. (C) As recorded:
 share flagged by the published (plain) and floor-corrected (hatched) Montreal and SINBAR

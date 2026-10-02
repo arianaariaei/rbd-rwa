@@ -27,8 +27,8 @@ Prints (and writes to results/report.md):
   T15 the same without transitional epochs (first and last of each REM period)
   T16 the floor signature: quietest N2/N3 over quietest REM chin level
   T17 age in CAP: RBD against same-system patients under 50 and aged 50 or over
-  T8  heartbeat artefact in the chin EMG before and after its removal
-  T14 MGH positive calls by the residual heartbeat artefact
+  T8  heartbeat artifact in the chin EMG before and after its removal
+  T14 MGH positive calls by the residual heartbeat artifact
 
 Nights with less than MIN_REM minutes of REM are left out, as clinical
 scoring would.
@@ -385,7 +385,7 @@ def main():
         say()
 
     # T8 ─────────────────────────────────────────────────────────────────────
-    say("T8  Heartbeat artefact in chin EMG (heartbeat-locked ratio; 1 = none), median [p90]")
+    say("T8  Heartbeat artifact in chin EMG (heartbeat-locked ratio; 1 = none), median [p90]")
     import json
     residual = {}                                    # (cohort, record) -> ratio after removal
     for cdir in sorted((config.DURABLE / "packs").glob("*")):
@@ -411,7 +411,7 @@ def main():
     art["art"] = [residual.get(("chal18", r), np.nan) for r in art.record]
     art = art.dropna(subset=["art"])
     if len(art):
-        say("T14 MGH: % positive by residual heartbeat artefact (tertiles of the ratio after removal)")
+        say("T14 MGH: % positive by residual heartbeat artifact (tertiles of the ratio after removal)")
         art["t"] = pd.qcut(art.art, 3, labels=False)
         for meth, g in art.groupby("method"):
             say(f"  {meth:<9} " + "   ".join(f"ratio {g.art[g.t == k].median():.2f}: "

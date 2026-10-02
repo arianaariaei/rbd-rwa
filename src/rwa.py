@@ -23,12 +23,12 @@ thresholds, what counts as "background", and which cut-off applies:
             surrounding 60 one-second mini-epochs). RAI < 0.8 is the commonly
             used abnormal range.
 
-Five COMPUTERISED indices (RAI among them) were compared on the same 146
+Five COMPUTERIZED indices (RAI among them) were compared on the same 146
 recordings by Cesari et al., Sleep 2018;41(10):zsy133. This module puts the
 visual-criteria methods and the RAI on one code path so they can be applied
 unchanged to large clinical cohorts.
 
-OPERATIONALISING "BACKGROUND". The visual methods judge background by eye.
+OPERATIONALIZING "BACKGROUND". The visual methods judge background by eye.
 Here it is an explicit, named choice (`baseline_amplitude`), because it
 changes every downstream percentage. Values still listed in a method's
 `verify` tuple are secondary-source readings not yet checked against the
@@ -51,7 +51,7 @@ NOISE_P5_RATIO = 0.91
 
 def mini_epoch_rms(env, env_fs, seconds, how="rms"):
     """
-    Split an envelope into consecutive mini-epochs and summarise each: "rms"
+    Split an envelope into consecutive mini-epochs and summarize each: "rms"
     for an RMS envelope (gives the RMS of the underlying signal), "mean" for a
     mean-rectified envelope (gives its average rectified amplitude).
     """

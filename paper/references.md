@@ -72,7 +72,7 @@ Added 2026-09-26 (second round; metadata from Europe PMC):
 24. Mihashi I, Takei Y, Kawana F, et al. REM sleep without atonia thresholds are associated
     with reduced cardiac MIBG uptake but not with DAT-SPECT binding in probable REM sleep
     behavior disorder. Sleep Med. 2026;147:109132. doi:10.1016/j.sleep.2026.109132
-    (multicentre, 91 Japanese patients; SINBAR threshold >= 11.3% "substantially lower than
+    (multicenter, 91 Japanese patients; SINBAR threshold >= 11.3% "substantially lower than
     the Western standard of 27.2%"; confirm title ending)
 25. Leclair-Visonneau L, Feemster JC, Bibi N, et al. Contemporary diagnostic visual and
     automated polysomnographic REM sleep without atonia thresholds in isolated REM sleep
@@ -81,11 +81,11 @@ Added 2026-09-26 (second round; metadata from Europe PMC):
 26. Lim MM, Neilson LE, Elliott JE, et al. The North American Prodromal Synucleinopathy
     study: protocol for a multi-site, longitudinal, observational study of idiopathic/isolated
     rapid eye movement sleep behavior disorder. Sleep Adv. 2026;7(1):zpag007.
-    doi:10.1093/sleepadvances/zpag007 (9 centres, centralised PSG analysis)
+    doi:10.1093/sleepadvances/zpag007 (9 centers, centralized PSG analysis)
 27. Ferri R, Puligheddu M, Figorilli M, et al. Protocol for the DREAMER study: design and
     methodological framework of a multicenter trial-ready cohort of individuals with
     isolated REM sleep without atonia. PLoS One. 2026;21(6):e0350467.
-    doi:10.1371/journal.pone.0350467 (4 Italian centres; RAI < 0.85)
+    doi:10.1371/journal.pone.0350467 (4 Italian centers; RAI < 0.85)
 28. Papakonstantinou A, Klemming J, Haberecht M, et al. Ikelos-RWA. Validation of an
     automatic tool to quantify REM sleep without atonia. Clin EEG Neurosci.
     2024;55(6):657-664. doi:10.1177/15500594231175320
