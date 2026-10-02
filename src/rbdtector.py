@@ -76,6 +76,57 @@ def noise_ratio(fs=256.0, minutes=10.0, n=20, seed=0):
     return float(np.median(out))
 
 
+def _find_rem_blocks(MIN_REM_BLOCK_LENGTH_IN_S, is_rem_series):
+    """RBDtector's PSG.find_rem_blocks (commit 7c9c73d), copied with one change:
+    the REM sample nearest to a short REM piece is found with numpy instead of
+    Python's min(..., key=abs) over every REM sample at 256 Hz (about 35 s per
+    night). Both return the first minimum, so the output is the same."""
+    from util import settings
+    continuuos_rem_ge_min_block_length = is_rem_series \
+        .groupby(is_rem_series.diff().ne(0).cumsum()) \
+        .transform('size') \
+        .ge(settings.RATE * MIN_REM_BLOCK_LENGTH_IN_S)
+    min_rem_block = continuuos_rem_ge_min_block_length & is_rem_series
+    rem_block_counter = 0
+
+    def transform_to_rem_group_name(x):
+        if x.all():
+            nonlocal rem_block_counter
+            rem_block_counter += 1
+            return rem_block_counter
+        else:
+            return 0
+
+    numbered_rem_blocks = min_rem_block \
+        .groupby(min_rem_block.diff().ne(0).cumsum()) \
+        .transform(transform_to_rem_group_name)
+    small_rem_pieces = is_rem_series & ~min_rem_block
+    block_indices = numbered_rem_blocks[numbered_rem_blocks != 0].index   # loop-invariant
+
+    def nearest(diff):                       # == min(diff, key=abs)
+        return diff[int(np.argmin(np.abs(diff.asi8)))]
+
+    def assign_small_piece_to_rem_block(x):
+        if x.all():
+            first_index_of_piece = x.index[0]
+            last_index_of_piece = x.index[-1]
+            closest_to_beginning_of_piece = nearest(first_index_of_piece - block_indices)
+            closest_to_end_of_piece = nearest(last_index_of_piece - block_indices)
+            if closest_to_beginning_of_piece < closest_to_end_of_piece:
+                block_number = numbered_rem_blocks[first_index_of_piece - closest_to_beginning_of_piece]
+            else:
+                block_number = numbered_rem_blocks[last_index_of_piece - closest_to_end_of_piece]
+            return block_number
+        else:
+            return 0
+
+    small_rem_pieces_assigned_to_numbered_rem_blocks = small_rem_pieces \
+        .groupby(small_rem_pieces.diff().ne(0).cumsum()) \
+        .transform(assign_small_piece_to_rem_block)
+    all_rem_sleep_numbered = numbered_rem_blocks + small_rem_pieces_assigned_to_numbered_rem_blocks
+    return all_rem_sleep_numbered, min_rem_block, numbered_rem_blocks, small_rem_pieces
+
+
 def _patch():
     """Wrap RBDtector's baseline finder: record the baseline, and replace it by
     half the floor-corrected threshold when the variant is 'FC'. Also give
@@ -98,9 +149,16 @@ def _patch():
     if getattr(PSG, "_rwa_patched", False):
         return
     original = PSG.find_baselines
+    PSG.find_rem_blocks = staticmethod(_find_rem_blocks)
 
     def find_baselines(*args, **kwargs):
-        df_b, df_art = original(*args, **kwargs)
+        # The floor-corrected run of a night starts from the baseline its published
+        # run computed from the same input files (identical, so reused, not redone)
+        if _state["variant"] == "FC" and _state.get("cache_key") == _state.get("folder"):
+            df_b, df_art = (d.copy() for d in _state["cache"])
+        else:
+            df_b, df_art = original(*args, **kwargs)
+            _state["cache_key"], _state["cache"] = _state.get("folder"), (df_b.copy(), df_art.copy())
         cols = [c for c in df_b.columns if c.endswith("_baseline")]
         if cols:
             _state["baseline_uv"] = float(np.nanmedian(df_b[cols[0]].to_numpy(float)))
@@ -176,7 +234,10 @@ def run(folder, variant="published"):
     from app_logic.PSG_controller import PSGController
     _state["variant"] = variant
     _state["baseline_uv"] = np.nan
+    _state["folder"] = str(folder)
     df_out, _ = PSGController.run_rbd_detection(str(folder), str(folder))
+    if variant == "FC":
+        _state["cache_key"] = _state["cache"] = None
     flat = _flatten(df_out)
 
     def pick(suffix, need="EMG"):

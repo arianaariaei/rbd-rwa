@@ -11,8 +11,9 @@ own: the same seeded track and the same scale per step as run_cohort.py
     python run_rbdtector.py --cohort hmc                 # HMC, as recorded
     python run_rbdtector.py --cohort boas                # BOAS first nights, as recorded
 
--> results/rbdtector_scores.csv: one row per night, step and variant. Re-running
-skips nights already scored; --mirror copies the file to Drive after each night.
+-> results/rbdtector_scores.csv (or --out): one row per night, step and variant.
+Re-running skips nights already scored; --mirror copies the file to Drive after
+each night.
 """
 import argparse
 import shutil
@@ -111,9 +112,12 @@ def main():
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--limit", type=int, default=0, help="stop after this many nights (test)")
     ap.add_argument("--mirror", default=None, help="copy the scores file here after each night")
+    ap.add_argument("--out", default="rbdtector_scores.csv", help="scores file in results/ (to split work across runtimes)")
     ap.add_argument("--steps", default=None,
                     help="comma-separated ladder steps (CAP default: " + ",".join(LADDER_STEPS) + ")")
     args = ap.parse_args()
+    global OUT
+    OUT = config.RESULTS / args.out
 
     from src import rbdtector as rt
     rt.install()

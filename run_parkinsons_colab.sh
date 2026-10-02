@@ -3,15 +3,22 @@
 # runtime, reusing the scores already on Drive; everything new is copied back to
 # Drive as it is made. Run from the code directory, e.g. in Colab's terminal:
 #   cd /content/rbd-rwa && setsid nohup sh run_parkinsons_colab.sh > /content/pd.log 2>&1 < /dev/null &
+# RBDtector needs about a minute per night and step on Colab's 2-core runtime, so
+# the work can be split over two runtimes: PART=1 (CAP ladder, BOAS, then the
+# analysis, once part 2 is on Drive) and PART=2 (MGH and HMC).
 set -e
+PART=${PART:-all}
 D=/content/drive/MyDrive/rbd-rwa
 export RBD_DURABLE_DIR=/content/durable PYTHONUNBUFFERED=1
 R=$RBD_DURABLE_DIR/results
 F=$RBD_DURABLE_DIR/figures
 mkdir -p "$R" "$F" "$D/results" "$D/figures"
-for f in external_scores.csv floor_ladder_scores.csv floor_scores.csv ladder_scores.csv rbdtector_scores.csv; do
+for f in external_scores.csv floor_ladder_scores.csv floor_scores.csv ladder_scores.csv; do
   if [ -f "$D/results/$f" ] && [ ! -f "$R/$f" ]; then cp "$D/results/$f" "$R/"; fi
 done
+O=rbdtector_scores.csv
+if [ "$PART" = 2 ]; then O=rbdtector_scores_systems.csv; fi
+if [ -f "$D/results/$O" ] && [ ! -f "$R/$O" ]; then cp "$D/results/$O" "$R/"; fi
 # RBDtector runs in the environment its requirements.txt specifies (2021 versions;
 # pandas 2 removed DataFrame.append, which its output writer uses)
 E=/content/rbdt_env
@@ -21,10 +28,21 @@ if [ ! -x "$E/bin/python" ]; then
   uv pip install -q -p "$E/bin/python" "numpy~=1.21.2" "pandas~=1.3.3" "scipy~=1.7.1" \
     "openpyxl~=3.0.8" "pyEDFlib~=0.1.22" "wfdb~=3.4.0"
 fi
-"$E/bin/python" run_rbdtector.py --cohort cap --mirror "$D/results"
-"$E/bin/python" run_rbdtector.py --cohort chal18 --sample 100 --mirror "$D/results"
-"$E/bin/python" run_rbdtector.py --cohort hmc --mirror "$D/results"
-"$E/bin/python" run_rbdtector.py --cohort boas --mirror "$D/results"
+RB="$E/bin/python run_rbdtector.py --out $O --mirror $D/results"
+if [ "$PART" != 2 ]; then
+  # +0.5 and +2.0 uV dropped for run time, as the pre-registration allows
+  $RB --cohort cap --steps native,n100,h150
+  $RB --cohort boas
+fi
+if [ "$PART" != 1 ]; then
+  $RB --cohort chal18 --sample 100
+  $RB --cohort hmc
+fi
+if [ "$PART" = 2 ]; then touch "$D/results/rbdtector_part2.done"; echo PART2_DONE; exit 0; fi
+if [ "$PART" = 1 ]; then
+  while [ ! -f "$D/results/rbdtector_part2.done" ]; do sleep 60; done
+  cp "$D/results/rbdtector_scores_systems.csv" "$R/"
+fi
 python run_parkinsons.py
 python run_ladder.py --from-csv
 cp "$R"/parkinsons_* "$R"/ladder_report.md "$D/results/"

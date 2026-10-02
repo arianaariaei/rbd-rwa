@@ -73,9 +73,11 @@ def load():
     ext = ext[(ext.rem_minutes >= MIN_REM) & (ext.who.fillna("") != "") & ext.primary.astype(bool)]
     lad = pd.read_csv(R / "floor_ladder_scores.csv", low_memory=False)
     lad = lad[lad.rem_minutes >= MIN_REM]
-    rb = pd.read_csv(R / "rbdtector_scores.csv", dtype={"record": str}) \
-        if (R / "rbdtector_scores.csv").exists() else pd.DataFrame()
+    parts = sorted(R.glob("rbdtector_scores*.csv"))        # one file per runtime used
+    rb = pd.concat([pd.read_csv(f, dtype={"record": str}) for f in parts], ignore_index=True) \
+        if parts else pd.DataFrame()
     if len(rb):
+        rb = rb.drop_duplicates(["cohort", "record", "step", "variant"], keep="last")
         if rb.rem_miniepochs.notna().any():                     # 20 mini-epochs per minute
             rb = rb[rb.rem_miniepochs.fillna(0) >= MIN_REM * 20]
         floor = ext[(ext.method == "Montreal") & (ext.variant == "published")] \
