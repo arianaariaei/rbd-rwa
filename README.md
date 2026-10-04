@@ -74,6 +74,8 @@ source file:
 
 ## Paper
 
+The assembled manuscript for the journal SLEEP and its supplement are in `paper/submission/` (Word files for submission and Markdown snapshots); the figures are the PNG/PDF files the pipeline writes. `docs/research_proposal_2026-10-04.docx` explains the whole project in research-proposal form for readers with a computer science background.
+
 `paper/` holds the drafts (methods, results, discussion, abstract, figure legends,
 references, STARD checklist), the result records, the audit, and four pre-registrations,
 each committed before its analysis was run: `preregistration_noise_ladder.md`,
