@@ -284,8 +284,11 @@ def _mini(mask2d, env_fs, seconds):
     return flat[: n * w].reshape(n, w)
 
 
-def score_night(pack, method: Method, band="native", exclude=()):
-    """Apply one method to one night. Returns a dict of its measures."""
+def score_night(pack, method: Method, band="native", exclude=(), masks=None):
+    """Apply one method to one night. Returns a dict of its measures. If a dict
+    is passed as `masks`, it receives the per-unit decisions behind them:
+    "tonic" (one per tonic epoch), "phasic" (per phasic mini-epoch) and "any"
+    (per SINBAR mini-epoch), on consecutive units of the night's REM."""
     meta = pack["meta"]
     env_fs, epoch_sec = meta["env_fs"], meta["epoch_sec"]
     ep, env, _, nrem = _select(pack, band, exclude)
@@ -333,11 +336,14 @@ def score_night(pack, method: Method, band="native", exclude=()):
         out["phasic_epoch_pct"] = round(100.0 * hits.mean(), 2)
 
     # ── SINBAR "any": tonic, phasic or both, above the same amplitude ──────
+    any_ = None
     if method.any_mini_s:
         active = _runs(env, ep, env_fs, threshold(method, method.any_mult, bp), 0.1, None)
-        out["any_pct"] = round(100.0 * _mini(active, env_fs, method.any_mini_s)
-                               .any(axis=1).mean(), 2)
+        any_ = _mini(active, env_fs, method.any_mini_s).any(axis=1)
+        out["any_pct"] = round(100.0 * any_.mean(), 2)
 
+    if masks is not None:
+        masks.update(tonic=tonic, phasic=phasic, any=any_)
     hits = [out.get(k, np.nan) >= v for k, v in method.cutoffs.items()
             if np.isfinite(out.get(k, np.nan))]
     out["positive"] = bool(any(hits)) if hits else None

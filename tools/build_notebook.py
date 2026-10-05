@@ -23,7 +23,9 @@ FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fe
          "run_extract.py", "run_cohort.py", "run_score.py", "run_sensitivity.py",
          "run_report.py", "run_figures.py", "run_ladder.py", "run_floor.py", "run_external.py",
          "src/rbdtector.py", "src/floorcheck.py", "run_rbdtector.py", "run_parkinsons.py",
-         "run_rbdtector_noise.py", "check_floor.py", "run_parkinsons_colab.sh"]
+         "run_rbdtector_noise.py", "check_floor.py", "run_parkinsons_colab.sh",
+         "src/inject.py", "run_inject.py", "sim_injection.py", "run_inject_report.py",
+         "run_inject_colab.sh"]
 
 
 def md(text):
@@ -155,6 +157,19 @@ it, run `PART=2 sh run_parkinsons_colab.sh` (MGH, HMC, BOAS) on a second runtime
 `PART=1 sh run_parkinsons_colab.sh` (CAP, then the analysis) here; both need Drive.
 """),
         code(f"!cd {CODE_DIR} && sh run_parkinsons_colab.sh"),
+        md("""
+## 5e. Known muscle activity added to every night
+
+Ground truth that does not depend on the 21 RBD patients: muscle activity of known size is
+added to the REM sleep of every night without RBD on the six recording systems (synthetic
+tonic and phasic activity at 49 amplitudes), and the REM muscle activity of the 21 CAP RBD
+patients is transplanted into the same nights at full and half amplitude. Scored with the
+published and floor-corrected rules against the criteria fixed in advance
+(paper/preregistration_injection.md). All nights are streamed again; about five hours on one
+runtime. To split it, run `PART=2 sh run_inject_colab.sh` (the Dreem sets) on a second
+runtime and `PART=1 sh run_inject_colab.sh` here; both need Drive.
+"""),
+        code(f"!cd {CODE_DIR} && sh run_inject_colab.sh"),
         md("""
 The floor check for a recording of your own: an EDF on Drive and its 30-s stages (one per
 line: W, N1, N2, N3, R). It reports the system's noise floor, whether the floor-corrected

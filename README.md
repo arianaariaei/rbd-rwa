@@ -70,6 +70,11 @@ source file:
     run_parkinsons_colab.sh the Parkinson's runs and analysis in one command on Colab
     run_parkinsons.py what the floor means for Parkinson's research (pre-specified), figure 10
     src/floorcheck.py, check_floor.py   the floor check for one recording
+    src/inject.py     known muscle activity added to real nights (synthetic, transplanted RBD)
+    run_inject.py     the injection experiment for any cohort (resumable, parallel)
+    sim_injection.py  its white-noise predictions
+    run_inject_report.py  the injection experiment (pre-specified), figure 11
+    run_inject_colab.sh   the injection runs and analysis in one command on Colab
     tools/build_notebook.py   writes notebooks/RBD_RWA.ipynb
 
 ## Paper
@@ -77,10 +82,11 @@ source file:
 The assembled manuscript for the journal SLEEP and its supplement are in `paper/submission/` (Word files for submission and Markdown snapshots); the figures are the PNG/PDF files the pipeline writes. `docs/research_proposal_2026-10-04.docx` explains the whole project in research-proposal form for readers with a computer science background.
 
 `paper/` holds the drafts (methods, results, discussion, abstract, figure legends,
-references, STARD checklist), the result records, the audit, and four pre-registrations,
+references, STARD checklist), the result records, the audit, and five pre-registrations,
 each committed before its analysis was run: `preregistration_noise_ladder.md`,
 `preregistration_floor_corrected.md`, `preregistration_external.md`,
-`preregistration_parkinsons.md`.
+`preregistration_parkinsons.md`, `preregistration_injection.md` (with its white-noise
+predictions, `preregistration_injection_whitenoise.csv`).
 
 CAP annotations use wall-clock times, while the signal starts whenever the EDF header says
 (in `rbd1` the two differ by 2.6 hours); `src/cap.py` computes the offset explicitly.
