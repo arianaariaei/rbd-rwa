@@ -1,5 +1,7 @@
 # Measured against the noise floor: REM sleep without atonia across open sleep cohorts
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23697366.svg)](https://doi.org/10.5281/zenodo.23697366)
+
 Automated scoring of REM sleep without atonia (RWA) - the polysomnographic marker of REM
 sleep behavior disorder (RBD) - with the published Montreal, SINBAR, AASM and REM Atonia
 Index criteria, applied through one open pipeline to openly licensed polysomnograms.

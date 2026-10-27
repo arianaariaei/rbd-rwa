@@ -10,7 +10,7 @@ Automated scoring of REM sleep without atonia (RWA) is moving from single-center
 
 We think the work fits SLEEP because it concerns the measurement on which the diagnosis of RBD and much prodromal Parkinson's research rest, and its recommendation is simple: report automated RWA results together with the recording's noise floor and gain. We have framed every claim as a property of automated implementations; whether visual scoring shares the mechanism is the subject of a registered, blinded substudy (⟦OSF link⟧).
 
-All data are openly licensed (CAP, HMC and Challenge 2018 on PhysioNet; BOAS on OpenNeuro; Dreem Open Datasets on Zenodo). The code, a Colab notebook that regenerates every number, the analysis plans with their commit history (each committed before its analysis was run) and the per-night scores are public (https://github.com/arianaariaei/rbd-rwa; Zenodo ⟦DOI⟧).
+All data are openly licensed (CAP, HMC and Challenge 2018 on PhysioNet; BOAS on OpenNeuro; Dreem Open Datasets on Zenodo). The code, a Colab notebook that regenerates every number, the analysis plans with their commit history (each committed before its analysis was run) and the per-night scores are public (https://github.com/arianaariaei/rbd-rwa; analysis plans archived on Zenodo, doi:10.5281/zenodo.23697366).
 
 Use of AI: a generative AI assistant (Claude, Anthropic) was used to write and debug analysis code, run the cloud analyses, and draft and edit the manuscript. The authors checked all code, results and text and take full responsibility for the content. This is also stated in the Acknowledgements.
 

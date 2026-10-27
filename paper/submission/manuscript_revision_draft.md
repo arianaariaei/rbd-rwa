@@ -84,7 +84,7 @@ RBDtector, an open-source scorer developed for SINBAR scoring in patients with P
 
 ### Analysis plans
 
-The noise ladder, the floor-corrected criteria, the confirmation cohorts, the Parkinson's analyses, the known-activity experiment and the analyses added in revision were each written down and committed to the project's version-controlled repository before they were run (commits 6d3cc6b, 20b9ec2, 48053f3, 1e7acf0, 09393b4 and 41252ad; Supplementary Sections S3-S8). The discovery analyses that preceded them, and the design of the floor-corrected rule, used the discovery cohorts; only the confirmation cohorts and the known-activity experiment are independent of what was seen. The repository, with its full history, is public with an archived snapshot (Zenodo DOI ⟦⟧), so that the commit order can be checked.
+The noise ladder, the floor-corrected criteria, the confirmation cohorts, the Parkinson's analyses, the known-activity experiment and the analyses added in revision were each written down and committed to the project's version-controlled repository before they were run (commits 6d3cc6b, 20b9ec2, 48053f3, 1e7acf0, 09393b4 and 41252ad; Supplementary Sections S3-S8). The discovery analyses that preceded them, and the design of the floor-corrected rule, used the discovery cohorts; only the confirmation cohorts and the known-activity experiment are independent of what was seen. The repository, with its full history, is public, and a snapshot taken before the revision results is archived on Zenodo (doi:10.5281/zenodo.23697366), so that the commit order can be checked.
 
 ### Statistical analysis
 
@@ -148,7 +148,7 @@ Automated implementations of the published background-relative RWA criteria do n
 
 ## Declarations
 
-**Data availability.** All recordings are openly available without application: CAP Sleep Database (PhysioNet, doi:10.13026/C2VC79), HMC sleep staging database version 1.1 (PhysioNet, doi:10.13026/t79q-fr32), PhysioNet/Computing in Cardiology Challenge 2018 (PhysioNet, doi:10.13026/6phb-r450), BOAS (OpenNeuro ds005555, doi:10.18112/openneuro.ds005555.v1.1.3) and Dreem Open Datasets (Zenodo, doi:10.5281/zenodo.15900394), with the standard PhysioNet citation \[25\]. The code, the Colab notebook that runs the analyses end to end, every analysis plan with its commit history and the derived per-night scores are at https://github.com/arianaariaei/rbd-rwa (archived: Zenodo doi ⟦⟧).
+**Data availability.** All recordings are openly available without application: CAP Sleep Database (PhysioNet, doi:10.13026/C2VC79), HMC sleep staging database version 1.1 (PhysioNet, doi:10.13026/t79q-fr32), PhysioNet/Computing in Cardiology Challenge 2018 (PhysioNet, doi:10.13026/6phb-r450), BOAS (OpenNeuro ds005555, doi:10.18112/openneuro.ds005555.v1.1.3) and Dreem Open Datasets (Zenodo, doi:10.5281/zenodo.15900394), with the standard PhysioNet citation \[25\]. The code, the Colab notebook that runs the analyses end to end, every analysis plan with its commit history and the derived per-night scores are at https://github.com/arianaariaei/rbd-rwa (analysis plans archived before the revision results: Zenodo, doi:10.5281/zenodo.23697366).
 
 **Ethics.** Secondary analysis of de-identified, openly available data, in accordance with the Declaration of Helsinki; ⟦institutional exemption⟧.
 
