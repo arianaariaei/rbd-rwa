@@ -43,7 +43,17 @@ START = dt.datetime(2020, 1, 1, 22, 0, 0)
 STAGE = {0: "Wake", 1: "N1", 2: "N2", 3: "N3", 4: "REM"}
 PHYS_UV = 2000.0                      # EDF physical range +-2 mV: 0.06 uV steps
 
-_state = {"variant": "published", "ratio": None, "baseline_uv": np.nan}
+_state = {"variant": "published", "ratio": None, "baseline_uv": np.nan,
+          "fast": True, "cache": True}
+
+
+def set_mode(fast=True, cache=True):
+    """fast=False restores RBDtector's own find_rem_blocks; cache=False makes the
+    floor-corrected run recompute the baseline instead of reusing the published
+    run's. Both False = the program as released (for the verification run)."""
+    from app_logic.PSG import PSG
+    _state["fast"], _state["cache"] = bool(fast), bool(cache)
+    PSG.find_rem_blocks = staticmethod(_find_rem_blocks if fast else PSG._rwa_original_blocks)
 
 
 def install(home=HOME):
@@ -149,12 +159,14 @@ def _patch():
     if getattr(PSG, "_rwa_patched", False):
         return
     original = PSG.find_baselines
+    PSG._rwa_original_blocks = PSG.find_rem_blocks
     PSG.find_rem_blocks = staticmethod(_find_rem_blocks)
 
     def find_baselines(*args, **kwargs):
         # The floor-corrected run of a night starts from the baseline its published
         # run computed from the same input files (identical, so reused, not redone)
-        if _state["variant"] == "FC" and _state.get("cache_key") == _state.get("folder"):
+        if _state["variant"] == "FC" and _state["cache"] \
+                and _state.get("cache_key") == _state.get("folder"):
             df_b, df_art = (d.copy() for d in _state["cache"])
         else:
             df_b, df_art = original(*args, **kwargs)
@@ -185,8 +197,12 @@ def rem_span(hypnogram, margin=2):
     return max(0, int(rem[0]) - margin), min(len(hypnogram), int(rem[-1]) + margin + 1)
 
 
-def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30, trim=True):
+def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30, trim=True, arousals=None):
     """One night in RBDtector's input format; returns the folder.
+
+    arousals: scored arousal intervals, (start, end) in seconds from the start of
+    the night, written to the 'Classification Arousals' file so that RBDtector
+    excludes them as its published cut-off assumes (default: none).
 
     trim: write only the stretch from two epochs before the first REM epoch to
     two after the last. RBDtector scores REM only, the clock times stay those
@@ -217,17 +233,24 @@ def write_inputs(folder, x_uv, fs, hypnogram, epoch_s=30, trim=True):
     hdr = highlevel.make_header(startdate=start)
     highlevel.write_edf(str(folder / "night.edf"), [x], [sh], hdr,
                         file_type=pyedflib.FILETYPE_EDFPLUS)
-    clock = lambda s: (start + dt.timedelta(seconds=s)).strftime("%H:%M:%S") + ",000"
+    clock = lambda s: (start + dt.timedelta(seconds=s)).strftime("%H:%M:%S,%f")[:-3]
     head = start.strftime("%d.%m.%Y %H:%M:%S")
     lines = ["Signal ID: SchlafProfil\\profil", f"Start Time: {head}", "Unit: ",
              "Signal Type: Discret", "Events list: N4,N3,N2,N1,REM,Wake,Movement",
              "Rate: 30 s", ""]
     lines += [f"{clock(i * epoch_s)}; {STAGE.get(int(c), 'A')}" for i, c in enumerate(hypnogram)]
     (folder / "Sleep profile - night.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    for name, sid in (("Classification Arousals - night.txt", "KorrelationMA\\MAK"),
-                      ("Flow Events - night.txt", "FlowEvents\\Events")):
-        ev = [f"Signal ID: {sid}", f"Start Time: {head}", "Unit: s", "Signal Type: Impuls", "",
-              f"{clock(0)}-{clock(1)}; 1;Dummy (first second, wake)"]
+    t0, t1 = a * epoch_s, b * epoch_s
+    events = sorted((float(s0) - t0, float(s1) - t0) for s0, s1 in (arousals or [])
+                    if s1 > t0 and s0 < t1)
+    for name, sid, rows in (("Classification Arousals - night.txt", "KorrelationMA\\MAK", events),
+                            ("Flow Events - night.txt", "FlowEvents\\Events", [])):
+        ev = [f"Signal ID: {sid}", f"Start Time: {head}", "Unit: s", "Signal Type: Impuls", ""]
+        if rows:
+            ev += [f"{clock(max(s0, 0.0))}-{clock(min(s1, t1 - t0))}; {max(s1 - s0, 0):.0f};Arousal"
+                   for s0, s1 in rows]
+        else:
+            ev.append(f"{clock(0)}-{clock(1)}; 1;Dummy (first second, wake)")
         (folder / name).write_text("\n".join(ev) + "\n", encoding="utf-8")
     return folder
 

@@ -155,6 +155,10 @@ class Method:
     mode: str = "relative"
     ref_floor_uv: float = None
     guard_mult: float = 1.5
+    # Where the floor-corrected rule takes its noise estimate from: "rem" (the
+    # background b itself, as pre-specified), "nrem" (the quiet N2/N3 level,
+    # which cannot contain REM muscle activity) or "min" (the lower of the two).
+    noise_from: str = "rem"
 
 
 def threshold(method, k, b):
@@ -183,11 +187,11 @@ def threshold(method, k, b):
     return k * b
 
 
-def floor_corrected(method, ref_uv, mode="floor", guard=1.5):
+def floor_corrected(method, ref_uv, mode="floor", guard=1.5, noise_from="rem"):
     """A method's floor-corrected (or clamped) version, same name and cut-offs."""
     import dataclasses
     return dataclasses.replace(method, mode=mode, ref_floor_uv=float(ref_uv),
-                               guard_mult=guard)
+                               guard_mult=guard, noise_from=noise_from)
 
 
 METHODS = {
@@ -310,15 +314,25 @@ def score_night(pack, method: Method, band="native", exclude=(), masks=None):
         out["error"] = "background could not be estimated"
         return out
 
+    # the noise estimate the floor-corrected rule subtracts (default: b itself)
+    nt, nph = bt, bp
+    if method.mode == "floor" and method.noise_from != "rem":
+        bn = _background(env, nrem, env_fs, "p5_nrem")
+        if not (np.isfinite(bn) and bn > 0):
+            out["error"] = "no N2/N3 noise estimate"
+            return out
+        nt, nph = (bn, bn) if method.noise_from == "nrem" else (min(bt, bn), min(bp, bn))
+        out["noise_basis_uV"] = round(nph, 3)
+
     # ── tonic ────────────────────────────────────────────────────────────────
-    thr_t = threshold(method, method.tonic_mult, bt)
+    thr_t = threshold(method, method.tonic_mult, nt)
     if method.tonic_abs_uv is not None and meta.get("unit_known", True):
         thr_t = min(thr_t, method.tonic_abs_uv)      # "2x background OR > 10 uV"
     above = _mini(env > thr_t, env_fs, method.tonic_epoch_s)
     tonic = above.mean(axis=1) > 0.5
 
     # ── phasic ───────────────────────────────────────────────────────────────
-    thr_p = threshold(method, method.phasic_mult, bp)
+    thr_p = threshold(method, method.phasic_mult, nph)
     burst = _runs(env, ep, env_fs, thr_p, 0.1, method.phasic_max_s)
     phasic = _mini(burst, env_fs, method.phasic_mini_s).any(axis=1)
 
@@ -338,7 +352,7 @@ def score_night(pack, method: Method, band="native", exclude=(), masks=None):
     # ── SINBAR "any": tonic, phasic or both, above the same amplitude ──────
     any_ = None
     if method.any_mini_s:
-        active = _runs(env, ep, env_fs, threshold(method, method.any_mult, bp), 0.1, None)
+        active = _runs(env, ep, env_fs, threshold(method, method.any_mult, nph), 0.1, None)
         any_ = _mini(active, env_fs, method.any_mini_s).any(axis=1)
         out["any_pct"] = round(100.0 * any_.mean(), 2)
 

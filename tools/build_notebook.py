@@ -25,7 +25,9 @@ FILES = ["src/__init__.py", "src/config.py", "src/edf.py", "src/ecg.py", "src/fe
          "src/rbdtector.py", "src/floorcheck.py", "run_rbdtector.py", "run_parkinsons.py",
          "run_rbdtector_noise.py", "check_floor.py", "run_parkinsons_colab.sh",
          "src/inject.py", "run_inject.py", "sim_injection.py", "run_inject_report.py",
-         "run_inject_colab.sh"]
+         "run_inject_colab.sh", "src/noise_arms.py", "run_noise_arms.py", "run_revision.py",
+         "run_rbdtector_checks.py", "run_visual_package.py", "run_visual_analysis.py",
+         "run_site.py", "run_revision_colab.sh"]
 
 
 def md(text):
@@ -170,6 +172,18 @@ runtime. To split it, run `PART=2 sh run_inject_colab.sh` (the Dreem sets) on a 
 runtime and `PART=1 sh run_inject_colab.sh` here; both need Drive.
 """),
         code(f"!cd {CODE_DIR} && sh run_inject_colab.sh"),
+        md("""
+## 5f. Analyses added in revision
+
+Specified in paper/preregistration_revision.md before they were run: every between-site
+difference with confidence intervals and equivalence tests, the floor-corrected rule on
+in-range nights and with a noise estimate from N2/N3, the noise ladder with pink, drifting
+and recorded noise, the RBDtector checks (against the program as released, with MGH's
+scored arousals, with the heartbeat removed), and the blinded excerpts for the visual-scoring
+substudy (paper/visual_substudy_protocol.md). About eight hours; `PART=1` (re-analyses,
+noise, excerpts) and `PART=2` (RBDtector) can run on two runtimes.
+"""),
+        code(f"!cd {CODE_DIR} && sh run_revision_colab.sh"),
         md("""
 The floor check for a recording of your own: an EDF on Drive and its 30-s stages (one per
 line: W, N1, N2, N3, R). It reports the system's noise floor, whether the floor-corrected

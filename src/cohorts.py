@@ -164,6 +164,7 @@ class Chal18:
             hyp[a:min(b, n_ep)] = code
 
         flags = {"resp": np.zeros(n_ep, np.int8), "arousal": np.zeros(n_ep, np.int8)}
+        events = {"resp": [], "arousal": []}      # (start, end) in seconds
         open_ev = {}
         for s, note in zip(ann.sample, ann.aux_note):
             if note.startswith("("):
@@ -173,6 +174,7 @@ class Chal18:
                 kind = "resp" if label.startswith("resp_") else \
                     "arousal" if label.startswith("arousal_") else None
                 if kind:
+                    events[kind].append((s0 / fs, s / fs))
                     a = int(s0 / fs // EPOCH_SEC)
                     b = int(s / fs // EPOCH_SEC)
                     flags[kind][a:min(b + 1, n_ep)] = 1
@@ -181,7 +183,7 @@ class Chal18:
         extra = {"ahi": round(n_resp / sleep_h, 1) if sleep_h > 0 else None}
         return dict(chin=chin, fs=fs, unit_known=unit_known,
                     chin_label="Chin1-Chin2", ecg=ecg, fs_ecg=fs, legs=[],
-                    hypnogram=hyp, flags=flags, extra=extra,
+                    hypnogram=hyp, flags=flags, extra=extra, events=events,
                     eeg=eeg, fs_eeg=fs, eeg_label=eeg_name)
 
 

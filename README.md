@@ -75,6 +75,12 @@ source file:
     sim_injection.py  its white-noise predictions
     run_inject_report.py  the injection experiment (pre-specified), figure 11
     run_inject_colab.sh   the injection runs and analysis in one command on Colab
+    run_revision.py   analyses added in revision: intervals, equivalence, in-range, noise estimators
+    src/noise_arms.py, run_noise_arms.py   the ladder with pink, drifting and recorded noise
+    run_rbdtector_checks.py   RBDtector vs the program as released; arousals; heartbeat removed
+    run_visual_package.py, run_visual_analysis.py   the blinded visual-scoring substudy
+    run_revision_colab.sh the revision runs in one command on Colab
+    run_site.py       run the analyses at a sleep center on recordings that cannot be shared
     tools/build_notebook.py   writes notebooks/RBD_RWA.ipynb
 
 ## Paper
@@ -82,11 +88,13 @@ source file:
 The assembled manuscript for the journal SLEEP and its supplement are in `paper/submission/` (Word files for submission and Markdown snapshots); the figures are the PNG/PDF files the pipeline writes. `docs/research_proposal_2026-10-04.docx` explains the whole project in research-proposal form for readers with a computer science background.
 
 `paper/` holds the drafts (methods, results, discussion, abstract, figure legends,
-references, STARD checklist), the result records, the audit, and five pre-registrations,
+references, STARD checklist), the result records, the audit, and six analysis plans,
 each committed before its analysis was run: `preregistration_noise_ladder.md`,
 `preregistration_floor_corrected.md`, `preregistration_external.md`,
 `preregistration_parkinsons.md`, `preregistration_injection.md` (with its white-noise
-predictions, `preregistration_injection_whitenoise.csv`).
+predictions, `preregistration_injection_whitenoise.csv`), `preregistration_revision.md`; and
+the protocol of the visual-scoring substudy, `visual_substudy_protocol.md`, to be registered
+on OSF before scoring.
 
 CAP annotations use wall-clock times, while the signal starts whenever the EDF header says
 (in `rbd1` the two differ by 2.6 hours); `src/cap.py` computes the offset explicitly.
