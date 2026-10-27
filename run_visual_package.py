@@ -89,7 +89,8 @@ def write_edf(path, signals, start_s, hyp, epochs, a):
                                                   physical_max=lim, **{rate: int(fs)}))
     ann = [[float(i * 30), 30.0, f"Sleep stage {STAGE.get(int(c), '?')}"] for i, c in enumerate(hyp)]
     ann += [[float((e - a) * 30), 30.0, "SCORE THIS EPOCH"] for e in epochs]
-    hdr = highlevel.make_header(annotations=ann)
+    hdr = highlevel.make_header()
+    hdr["annotations"] = ann          # pyedflib takes annotations in the header dict
     highlevel.write_edf(str(path), sigs, heads, hdr, file_type=pyedflib.FILETYPE_EDFPLUS)
 
 
