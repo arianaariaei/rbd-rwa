@@ -31,7 +31,14 @@ from src import config
 
 OUT = config.DURABLE / "noise_arms"
 LIB = config.DURABLE / "noise_library.npz"
+LIB_MATCHED = config.DURABLE / "noise_library_matched.npz"
 REF_UV = 1.0
+# --exploratory (specified after R1's results; paper/preregistration_revision.md,
+# addendum): drifting and level-matched recorded noise, scored also with the
+# floor-corrected rule whose noise estimate follows the night (per REM period,
+# per 11-epoch window)
+EXPLORATORY = False
+KINDS_RUN = None
 
 
 def variants():
@@ -43,6 +50,9 @@ def variants():
         for src in ("rem", "nrem", "min"):
             out.append((m.name, "FC" if src == "rem" else f"FC-{src}",
                         floor_corrected(m, REF_UV, noise_from=src)))
+        if EXPLORATORY:
+            out += [(m.name, f"FC-{sc}", floor_corrected(m, REF_UV, noise_scope=sc))
+                    for sc in ("period", "window")]
     out.append(("AASM", "published", METHODS["aasm"]))
     return out
 
@@ -71,7 +81,7 @@ def _library_work(rec, scratch):
         shutil.rmtree(folder, ignore_errors=True)
 
 
-def build_library(workers):
+def build_library(workers, matched=False):
     from src.cohorts import COHORTS
     from src.noise_arms import build_library as splice, save_library
     recs = [r for r in COHORTS["hmc"].records() if r not in ("SN014", "SN064", "SN135")][::5][:30]
@@ -85,10 +95,12 @@ def build_library(workers):
             pieces.append((rec, runs))
             used.append(rec)
             print(f"  {rec}: {sum(len(p) for p in runs) / 256:.0f} s of quiet REM", flush=True)
-    pieces.sort()
-    lib = splice([p for _, p in pieces])
-    save_library(LIB, lib, {"nights": sorted(used), "seconds": round(len(lib) / 256.0, 1)})
-    print(f"library: {len(used)} nights, {len(lib) / 256 / 60:.1f} min -> {LIB}", flush=True)
+    pieces.sort(key=lambda t: t[0])
+    lib = splice([p for _, p in pieces], level_match=matched)
+    path = LIB_MATCHED if matched else LIB
+    save_library(path, lib, {"nights": sorted(used), "seconds": round(len(lib) / 256.0, 1),
+                             "level_matched": matched})
+    print(f"library: {len(used)} nights, {len(lib) / 256 / 60:.1f} min -> {path}", flush=True)
 
 
 def _work(name, rec, scratch, out_path):
@@ -117,12 +129,14 @@ def _work(name, rec, scratch, out_path):
         rms, mav = bin_envelope(xf, fs)
         chin = {"rms": rms, "mav": mav}
         added = {"native": (0.0, quiet_level(rms, hyp))}
-        lib = na.load_library(LIB)[0] if LIB.exists() else None
-        for kind in na.KINDS:
-            if kind == "hmc" and lib is None:
-                continue
-            track = na.hmc(len(xf), fs, cohort.mains, rec, lib) if kind == "hmc" \
-                else getattr(na, kind)(len(xf), fs, cohort.mains, rec)
+        libs = {"hmc": LIB, "hmcmatched": LIB_MATCHED}
+        for kind in (KINDS_RUN or na.KINDS):
+            if kind in libs:
+                if not libs[kind].exists():
+                    continue
+                track = na.hmc(len(xf), fs, cohort.mains, rec, na.load_library(libs[kind])[0])
+            else:
+                track = getattr(na, kind)(len(xf), fs, cohort.mains, rec)
             for t in na.TARGETS_UV:
                 r, m, s, got = na.harmonized(xf, track, fs, hyp, t)
                 band = f"{kind}_h{round(t * 100):03d}"
@@ -160,8 +174,9 @@ def records(name):
 
 def run_cohort(name, workers, mirror):
     out_dir = OUT / name
+    sub = OUT.name
     out_dir.mkdir(parents=True, exist_ok=True)
-    m = Path(mirror) / "noise_arms" / name if mirror else None
+    m = Path(mirror) / sub / name if mirror else None
     if m:
         try:
             m.mkdir(parents=True, exist_ok=True)
@@ -205,12 +220,12 @@ def report():
     keep = ok[ok].index
     df = df.set_index(["cohort", "record"]).loc[keep].reset_index()
     df["y"] = df.positive.map(lambda x: float(x in (True, "True", 1, 1.0)) if pd.notna(x) else np.nan)
-    df.to_csv(config.RESULTS / "noise_arms_scores.csv", index=False)
+    df.to_csv(config.RESULTS / f"{OUT.name}_scores.csv", index=False)
     lines = []
     say = lambda s="": (print(s), lines.append(s))
     say("N1  Share flagged (%) by kind of noise at a quiet-REM level of 1.5 uV (h150) and 2.0 uV;")
     say("    the same nights (>= 10 min REM in every copy); native = as recorded")
-    bands = ["native"] + [f"{k}_h{t}" for t in ("150", "200") for k in ("white", "pink", "drift", "hmc")]
+    bands = ["native"] + [f"{k}_h{t}" for t in ("150", "200") for k in ("white", "pink", "drift", "hmc", "hmcmatched")]
     for who in ("MGH", "CAP RBD", "CAP patients"):
         g = df[df.who == who]
         say(f"  {who} (n={g.record.nunique()})  level: " + "  ".join(
@@ -218,7 +233,9 @@ def report():
             for b in bands if (g.band == b).any()))
         for meth, variant in (("Montreal", "published"), ("SINBAR", "published"), ("RAI", "published"),
                               ("Montreal", "FC"), ("SINBAR", "FC"), ("Montreal", "FC-nrem"),
-                              ("SINBAR", "FC-nrem"), ("Montreal", "FC-min"), ("SINBAR", "FC-min")):
+                              ("SINBAR", "FC-nrem"), ("Montreal", "FC-min"), ("SINBAR", "FC-min"),
+                              ("Montreal", "FC-period"), ("SINBAR", "FC-period"),
+                              ("Montreal", "FC-window"), ("SINBAR", "FC-window")):
             s = g[(g.method == meth) & (g.variant == variant)]
             cells = "  ".join(f"{b} {100 * s[s.band == b].y.mean():5.1f}" for b in bands if (s.band == b).any())
             say(f"    {meth + ' ' + variant:<18} {cells}")
@@ -227,12 +244,15 @@ def report():
     rng = np.random.default_rng(4)
     for who in ("MGH", "CAP RBD", "CAP patients"):
         for meth, variant in (("Montreal", "published"), ("SINBAR", "published"),
-                              ("Montreal", "FC"), ("SINBAR", "FC")):
+                              ("Montreal", "FC"), ("SINBAR", "FC"),
+                              ("Montreal", "FC-window"), ("SINBAR", "FC-window")):
             s = df[(df.who == who) & (df.method == meth) & (df.variant == variant)]
+            if s.empty:
+                continue
             w = s.pivot_table(index="record", columns="band", values="y")
             cells = []
             for t in ("150", "200"):
-                for k in ("pink", "drift", "hmc"):
+                for k in ("pink", "drift", "hmc", "hmcmatched"):
                     a, b = f"{k}_h{t}", f"white_h{t}"
                     if a not in w or b not in w:
                         continue
@@ -242,7 +262,7 @@ def report():
                                  f"{100 * np.percentile(bs, 97.5):+.1f}]")
             say(f"  {who:<13}{meth + ' ' + variant:<18} " + "  ".join(cells))
     say()
-    (config.RESULTS / "noise_arms_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (config.RESULTS / f"{OUT.name}_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main():
@@ -252,14 +272,21 @@ def main():
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--mirror", default=None, help="Drive folder (e.g. MyDrive/rbd-rwa)")
     ap.add_argument("--report", action="store_true")
+    ap.add_argument("--exploratory", action="store_true",
+                    help="drift and level-matched recorded noise; FC with local noise estimates")
     args = ap.parse_args()
+    global OUT, EXPLORATORY, KINDS_RUN
+    if args.exploratory:
+        OUT, EXPLORATORY = config.DURABLE / "noise_arms_x", True
+        KINDS_RUN = ("white", "drift", "hmcmatched")
     if args.library:
-        if args.mirror and (Path(args.mirror) / LIB.name).exists() and not LIB.exists():
-            shutil.copy2(Path(args.mirror) / LIB.name, LIB)
-        if not LIB.exists():
-            build_library(args.workers)
+        path = LIB_MATCHED if args.exploratory else LIB
+        if args.mirror and (Path(args.mirror) / path.name).exists() and not path.exists():
+            shutil.copy2(Path(args.mirror) / path.name, path)
+        if not path.exists():
+            build_library(args.workers, matched=args.exploratory)
             if args.mirror:
-                shutil.copy2(LIB, Path(args.mirror) / LIB.name)
+                shutil.copy2(path, Path(args.mirror) / path.name)
     if args.cohort:
         run_cohort(args.cohort, args.workers, args.mirror)
     if args.report:

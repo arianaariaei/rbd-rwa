@@ -89,3 +89,26 @@ Added 2026-10-27, before any run: secondary sources give the Montreal phasic bur
 0.1-5 s or 0.1-10 s, whereas the main analysis allowed up to 15 s (the original article could
 not be checked here). Every night as recorded is also scored with bursts limited to 5 s and to
 10 s (published and floor-corrected), and the share flagged in each group is reported.
+
+## Addendum, 2026-10-27, after R1's results and before the analyses below (exploratory)
+
+R1 showed that noise whose level drifts through the night makes the floor-corrected rule
+flag far more nights (Montreal-FC on MGH 21% -> 46% at 1.5 µV), as anticipated above, and that
+the recorded-noise library as specified was dominated by level jumps between the spliced
+nights. Two exploratory analyses follow, specified now and labeled exploratory wherever
+reported:
+
+1. **A noise estimate that follows the night.** The floor-corrected rule with its quiet level
+   taken per REM period (runs of at least 2 min; "FC-period") or per 11-epoch window within a
+   REM period ("FC-window"), instead of once per night. On synthetic nights (white or drifting
+   noise, with and without RBD-like activity) the window estimate removed most of the activity
+   that drift creates and left RBD-like activity and white-noise nights unchanged. Scored on
+   every night as recorded (site differences, CAP RBD sensitivity and same-system false
+   positives, confirmation cohorts) and on R1's drifting-noise copies.
+2. **Level-matched recorded noise.** The HMC library rebuilt with each night's quiet runs scaled
+   to a common RMS before splicing ("hmcmatched"), which keeps each night's spectrum and
+   within-night variation, not the differences between nights.
+
+Because the window estimate is computed from the night's own REM, a patient whose activity
+fills a whole window would raise its estimate; RBD sensitivity under FC-window is therefore the
+quantity to watch, and it is reported against the night-level rule on the same 21 nights.

@@ -16,6 +16,9 @@ From the packs (every night as recorded) and the score files of the earlier runs
   V9  AASM's continuous measures along the ladder
 
     python run_revision.py -> results/revision_scores.csv, results/revision_report.md
+    python run_revision.py --exploratory -> the same with the floor-corrected rule's noise
+        estimate following the night (per REM period, per 11-epoch window); specified after
+        R1's results (preregistration_revision.md, addendum) and labeled exploratory
 """
 import itertools
 import sys
@@ -43,6 +46,12 @@ YES = (True, "True", 1, 1.0)
 RULES = [("Montreal", "published"), ("Montreal", "FC"), ("Montreal", "FC-nrem"), ("Montreal", "FC-min"),
          ("SINBAR", "published"), ("SINBAR", "FC"), ("SINBAR", "FC-nrem"), ("SINBAR", "FC-min"),
          ("RAI", "published")]
+EXPLORATORY = "--exploratory" in sys.argv
+if EXPLORATORY:
+    RULES = [("Montreal", "published"), ("Montreal", "FC"), ("Montreal", "FC-period"),
+             ("Montreal", "FC-window"), ("SINBAR", "published"), ("SINBAR", "FC"),
+             ("SINBAR", "FC-period"), ("SINBAR", "FC-window"), ("RAI", "published")]
+TAG = "revision_exploratory" if EXPLORATORY else "revision"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -102,6 +111,13 @@ def variants():
         out.append(("published", m))
         out += [("FC" if s == "rem" else f"FC-{s}", floor_corrected(m, 1.0, noise_from=s))
                 for s in ("rem", "nrem", "min")]
+    if EXPLORATORY:
+        out = [(v, m) for v, m in out if v in ("published", "FC")]
+        for key in ("montreal", "sinbar"):
+            out += [(f"FC-{sc}", floor_corrected(METHODS[key], 1.0, noise_scope=sc))
+                    for sc in ("period", "window")]
+        out.append(("published", METHODS["aasm"]))
+        return out
     # Montreal phasic bursts: sources give 0.1-5 s and 0.1-10 s; the main analysis used 15 s
     for mx in (5.0, 10.0):
         m = dataclasses.replace(METHODS["montreal"], phasic_max_s=mx)
@@ -201,7 +217,7 @@ def main():
     with ProcessPoolExecutor(max_workers=2) as ex:
         rows = [r for part in ex.map(score_file, files, chunksize=8) for r in part]
     df = label(pd.DataFrame(rows))
-    df.to_csv(config.RESULTS / "revision_scores.csv", index=False)
+    df.to_csv(config.RESULTS / f"{TAG}_scores.csv", index=False)
     lines = []
     say = lambda s="": (print(s), lines.append(s))
 
@@ -247,16 +263,16 @@ def main():
                     f"n {n1}/{n2}  {100 * d:+5.1f} [{100 * lo:+.1f} to {100 * hi:+.1f}]  "
                     f"TOST10 {'equivalent' if e10 else 'not shown'} (p {p10:.3f})  "
                     f"TOST5 {'equivalent' if e5 else 'not shown'} (p {p5:.3f})")
-    pd.DataFrame(out).to_csv(config.RESULTS / "revision_site_differences.csv", index=False)
+    pd.DataFrame(out).to_csv(config.RESULTS / f"{TAG}_site_differences.csv", index=False)
     say("    nights outside FC's range: " + "  ".join(
         f"{w} {100 * (1 - df[(df.who == w) & df.primary & (df.method == 'Montreal') & (df.variant == 'FC') & (df.rem_minutes >= MIN_REM)].in_range.mean()):.0f}%"
         for w in GROUPS))
     say()
 
     # V4 ─────────────────────────────────────────────────────────────────────
-    say("V4  Noise estimate of the floor-corrected rule (B = 1.0 uV): REM (pre-specified), N2/N3, lower")
+    say("V4  Noise estimate of the floor-corrected rule (B = 1.0 uV)")
     for meth in ("Montreal", "SINBAR"):
-        for variant in ("published", "FC", "FC-nrem", "FC-min"):
+        for variant in [v for m_, v in RULES if m_ == meth]:
             k1, n1 = flagged(df, "CAP RBD", meth, variant)
             k2, n2 = flagged(df, "CAP patients", meth, variant)
             g = df[(df.method == meth) & (df.variant == variant) & (df.rem_minutes >= MIN_REM)]
@@ -266,7 +282,8 @@ def main():
             say(f"    {meth + ' ' + variant:<20} RBD {k1}/{n1} ({100 * k1 / n1:.0f}%)  same-system patients "
                 f"{k2}/{n2} ({100 * k2 / n2:.0f}%)  {aucs}")
     nb = df[(df.method == "Montreal") & (df.variant == "FC-nrem") & (df.rem_minutes >= MIN_REM)]
-    say("    noise basis (N2/N3 quiet level) median by group: " + "  ".join(
+    if not nb.empty:
+      say("    noise basis (N2/N3 quiet level) median by group: " + "  ".join(
         f"{w} {nb[nb.who == w].noise_basis_uV.median():.2f}" for w in GROUPS)
         + "   REM quiet level: " + "  ".join(
         f"{w} {nb[nb.who == w].level.median():.2f}" for w in GROUPS))
@@ -375,7 +392,7 @@ def main():
                        for v in ("published", "published-max5") if (g.variant == v).any())
         say(f"    {who:<13} " + "  ".join(cells) + "   mean " + ph)
     say()
-    (config.RESULTS / "revision_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (config.RESULTS / f"{TAG}_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

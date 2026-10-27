@@ -72,12 +72,19 @@ def drift(n, fs, mains, rec, tau_s=600.0, sd=0.3):
     return _unit(w * level, fs)
 
 
-def build_library(pieces_by_night, fs=LIB_FS, fade_s=0.02):
-    """Splice the quiet runs of several nights into one unit-RMS track."""
+def build_library(pieces_by_night, fs=LIB_FS, fade_s=0.02, level_match=False):
+    """Splice the quiet runs of several nights into one unit-RMS track. With
+    level_match, each night's runs are first scaled together to unit RMS, so the
+    track keeps each night's spectrum and its variation within the night but not
+    the differences in level between nights (exploratory; the pre-specified
+    library is not level-matched)."""
     r = int(round(fade_s * fs))
     up = 0.5 - 0.5 * np.cos(np.pi * (np.arange(r) + 0.5) / r)
     out = np.zeros(0)
     for pieces in pieces_by_night:
+        if level_match and pieces:
+            rms = np.sqrt(np.mean(np.concatenate([np.asarray(p, float) for p in pieces]) ** 2))
+            pieces = [np.asarray(p, float) / rms for p in pieces] if rms > 0 else pieces
         for p in pieces:
             p = np.asarray(p, float)
             if len(p) <= 2 * r:

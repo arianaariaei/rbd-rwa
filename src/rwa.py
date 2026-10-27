@@ -159,6 +159,14 @@ class Method:
     # background b itself, as pre-specified), "nrem" (the quiet N2/N3 level,
     # which cannot contain REM muscle activity) or "min" (the lower of the two).
     noise_from: str = "rem"
+    # "night": one noise estimate per night (as pre-specified); "period": each run
+    # of consecutive REM epochs at least `period_min_s` long gets its own quiet
+    # level; "window": each epoch gets the quiet level of the REM epochs within
+    # `window_epochs` of it in the same run, so that noise drifting through the
+    # night is followed (both exploratory)
+    noise_scope: str = "night"
+    period_min_s: float = 120.0
+    window_epochs: int = 5
 
 
 def threshold(method, k, b):
@@ -187,11 +195,13 @@ def threshold(method, k, b):
     return k * b
 
 
-def floor_corrected(method, ref_uv, mode="floor", guard=1.5, noise_from="rem"):
+def floor_corrected(method, ref_uv, mode="floor", guard=1.5, noise_from="rem",
+                    noise_scope="night"):
     """A method's floor-corrected (or clamped) version, same name and cut-offs."""
     import dataclasses
     return dataclasses.replace(method, mode=mode, ref_floor_uv=float(ref_uv),
-                               guard_mult=guard, noise_from=noise_from)
+                               guard_mult=guard, noise_from=noise_from,
+                               noise_scope=noise_scope)
 
 
 METHODS = {
@@ -254,11 +264,41 @@ def _segments(ep):
 
 def _runs(rem2d, ep, env_fs, thr, min_s, max_s):
     """runs_above within each stretch of consecutive REM epochs, so that a
-    burst never bridges the gap between two separate REM periods."""
+    burst never bridges the gap between two separate REM periods. `thr` is one
+    threshold, or one per epoch (constant within each stretch)."""
     out = np.zeros(rem2d.shape, bool)
     for a, b in _segments(ep):
-        out[a:b] = runs_above(rem2d[a:b].reshape(-1), env_fs, thr, min_s,
+        t = thr if np.ndim(thr) == 0 else float(thr[a])
+        out[a:b] = runs_above(rem2d[a:b].reshape(-1), env_fs, t, min_s,
                               max_s).reshape(b - a, -1)
+    return out
+
+
+def _period_levels(env, ep, env_fs, epoch_sec, night_level, min_s, window=None):
+    """Quiet level (5th percentile of 1-s RMS), one value per REM epoch. Without
+    `window`: of each run of consecutive REM epochs at least `min_s` long (shorter
+    runs keep the night's level). With `window` (epochs): of the epochs within
+    `window` of each epoch in the same run (at least 4 epochs of data)."""
+    out = np.full(len(ep), float(night_level))
+    per = env.shape[1]
+    sec = int(round(env_fs))
+    for a, b in _segments(ep):
+        if window is None:
+            if (b - a) * epoch_sec >= min_s:
+                r, _ = mini_epoch_rms(env[a:b].reshape(-1), env_fs, 1.0)
+                if len(r) >= 10:
+                    v = float(np.percentile(r, 5))
+                    if np.isfinite(v) and v > 0:
+                        out[a:b] = v
+            continue
+        r, _ = mini_epoch_rms(env[a:b].reshape(-1), env_fs, 1.0)
+        spe = per // sec                                  # 1-s values per epoch
+        for j in range(b - a):
+            lo, hi = max(0, j - window), min(b - a, j + window + 1)
+            if hi - lo >= 4:
+                v = float(np.percentile(r[lo * spe: hi * spe], 5))
+                if np.isfinite(v) and v > 0:
+                    out[a + j] = v
     return out
 
 
@@ -324,20 +364,30 @@ def score_night(pack, method: Method, band="native", exclude=(), masks=None):
         nt, nph = (bn, bn) if method.noise_from == "nrem" else (min(bt, bn), min(bp, bn))
         out["noise_basis_uV"] = round(nph, 3)
 
+    if method.mode == "floor" and method.noise_scope in ("period", "window"):
+        w = method.window_epochs if method.noise_scope == "window" else None
+        nt = _period_levels(env, ep, env_fs, epoch_sec, nt, method.period_min_s, w)
+        nph = _period_levels(env, ep, env_fs, epoch_sec, nph, method.period_min_s, w)
+        thr = lambda k, n: np.array([threshold(method, k, v) for v in n])
+    else:
+        thr = lambda k, n: threshold(method, k, n)
+
     # ── tonic ────────────────────────────────────────────────────────────────
-    thr_t = threshold(method, method.tonic_mult, nt)
+    thr_t = thr(method.tonic_mult, nt)
     if method.tonic_abs_uv is not None and meta.get("unit_known", True):
-        thr_t = min(thr_t, method.tonic_abs_uv)      # "2x background OR > 10 uV"
-    above = _mini(env > thr_t, env_fs, method.tonic_epoch_s)
+        thr_t = np.minimum(thr_t, method.tonic_abs_uv)   # "2x background OR > 10 uV"
+    above = _mini(env > (thr_t[:, None] if np.ndim(thr_t) else thr_t), env_fs,
+                  method.tonic_epoch_s)
     tonic = above.mean(axis=1) > 0.5
 
     # ── phasic ───────────────────────────────────────────────────────────────
-    thr_p = threshold(method, method.phasic_mult, nph)
+    thr_p = thr(method.phasic_mult, nph)
     burst = _runs(env, ep, env_fs, thr_p, 0.1, method.phasic_max_s)
     phasic = _mini(burst, env_fs, method.phasic_mini_s).any(axis=1)
 
     out.update(background_tonic_uV=round(bt, 3), background_phasic_uV=round(bp, 3),
-               tonic_threshold_uV=round(thr_t, 3), phasic_threshold_uV=round(thr_p, 3),
+               tonic_threshold_uV=round(float(np.median(thr_t)), 3),
+               phasic_threshold_uV=round(float(np.median(thr_p)), 3),
                tonic_pct=round(100.0 * tonic.mean(), 2) if len(tonic) else np.nan,
                phasic_pct=round(100.0 * phasic.mean(), 2) if len(phasic) else np.nan)
 
@@ -352,7 +402,7 @@ def score_night(pack, method: Method, band="native", exclude=(), masks=None):
     # ── SINBAR "any": tonic, phasic or both, above the same amplitude ──────
     any_ = None
     if method.any_mini_s:
-        active = _runs(env, ep, env_fs, threshold(method, method.any_mult, nph), 0.1, None)
+        active = _runs(env, ep, env_fs, thr(method.any_mult, nph), 0.1, None)
         any_ = _mini(active, env_fs, method.any_mini_s).any(axis=1)
         out["any_pct"] = round(100.0 * any_.mean(), 2)
 
