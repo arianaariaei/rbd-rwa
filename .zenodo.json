@@ -1,0 +1,8 @@
+{
+  "title": "Measured against the noise floor: automated REM sleep without atonia scoring across open polysomnography cohorts (code and analysis plans)",
+  "upload_type": "software",
+  "creators": [{"name": "Ariaei, Ariana"}],
+  "license": "MIT",
+  "description": "Open pipeline, Colab notebook, analysis plans (each committed before it was run) and per-night scores for the study of automated RWA scoring across recording systems.",
+  "keywords": ["REM sleep behavior disorder", "REM sleep without atonia", "polysomnography", "electromyography", "reproducibility"]
+}

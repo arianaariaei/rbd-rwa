@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the article and this software."
+title: "Measured against the noise floor: automated REM sleep without atonia scoring across open polysomnography cohorts"
+authors:
+  - family-names: Ariaei
+    given-names: Ariana
+license: MIT
+repository-code: "https://github.com/OWNER/rbd-rwa"
+keywords:
+  - REM sleep behavior disorder
+  - REM sleep without atonia
+  - polysomnography
+  - electromyography
+  - reproducibility

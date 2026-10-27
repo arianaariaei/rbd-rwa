@@ -123,16 +123,38 @@ def score_file(path):
 
 
 def restore_packs():
-    """Copy packs from Drive (MyDrive/rbd-rwa/packs) to the working disk if needed."""
+    """Copy packs from Drive (MyDrive/rbd-rwa/packs) to the working disk if needed.
+    Colab's Drive connection drops under many reads ("Transport endpoint is not
+    connected") and comes back: every file is retried with growing pauses."""
     import shutil
+    import time
     drive = config.DRIVE / "rbd-rwa" / "packs" if config.DRIVE else None
+    failed = []
     for c in COHORTS:
         d = config.DURABLE / "packs" / c
         d.mkdir(parents=True, exist_ok=True)
-        if drive and (drive / c).exists():
-            for p in (drive / c).glob("*.npz"):
-                if not (d / p.name).exists():
-                    shutil.copy2(p, d / p.name)
+        if not drive:
+            continue
+        files = []
+        for k in range(10):
+            try:
+                files = sorted((drive / c).glob("*.npz")) if (drive / c).exists() else []
+                break
+            except OSError:
+                time.sleep(10)
+        for p in files:
+            q = d / p.name
+            for k in range(8):
+                try:
+                    if not (q.exists() and q.stat().st_size == p.stat().st_size):
+                        shutil.copy2(p, q)
+                    break
+                except OSError:
+                    time.sleep(5 * (k + 1))
+            else:
+                failed.append(p.name)
+    if failed:
+        print(f"could not copy {len(failed)} packs from Drive: {failed[:10]}", flush=True)
 
 
 def label(df):
