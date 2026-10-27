@@ -84,3 +84,8 @@ CAP nights by group and recording system (the 105 analyzed against 88 in Table 1
 analysis without the five narcolepsy patients and against patients aged 50 or over; AASM's
 continuous measures along the ladder; the MGH ladder recomputed on one set of nights (those
 with at least 10 min of REM as recorded and at every step).
+
+Added 2026-10-27, before any run: secondary sources give the Montreal phasic burst as
+0.1-5 s or 0.1-10 s, whereas the main analysis allowed up to 15 s (the original article could
+not be checked here). Every night as recorded is also scored with bursts limited to 5 s and to
+10 s (published and floor-corrected), and the share flagged in each group is reported.

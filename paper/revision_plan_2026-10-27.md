@@ -25,6 +25,7 @@ the author (a decision, a signature, a person, or permission to publish).
 | M10 AASM | Removed from the abstract; one Results sentence on its continuous measures along the ladder | code + text | to do |
 | M11 Authorship, AI | Co-author invitation letter (sleep physician, ideally also a statistician); AI disclosure kept explicit | you | draft letter |
 | Numbers | 277/280 (one paired set throughout), interval types labeled, abstract trimmed, ladder criterion 3 counted as partly met, CAP 105 vs 88 explained (row + flow diagram), Table 3 re-rounded, "about 40", "(100)" in RBDtector cells, rho with n and p, Montreal 15-s source | code + text | to do |
+| Montreal phasic duration | Sources disagree (0.1-5 s; 0.1-10 s; the code used 15 s): every night re-scored with 5 s and 10 s; **check the original Montplaisir 2010 Methods through the library** and use the original as primary | code + you (library access) | coded |
 | References | Sakuma and Levendowski reworded; Postuma and DREAMER numbers checked; five new citations; dataset DOIs | text | to do |
 | Writing | Results restructured around three questions; abstract ~12 numbers; one term (quiet-REM level, b); evidence numbered; tone; legends cleaned | text | to do |
 | Compliance | MeSH keywords; Significance without methods; ethics (Helsinki + institutional exemption); disclosure; funding; figure files with alt text; graphical abstract; double-spaced Word file; cover letter | text + you (exemption letter, author details, US$50) | to do |

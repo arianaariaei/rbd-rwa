@@ -94,6 +94,7 @@ def paired_ci(a, b, n_boot=2000, seed=5):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def variants():
+    import dataclasses
     from src.rwa import METHODS, floor_corrected
     out = []
     for key in ("montreal", "sinbar"):
@@ -101,6 +102,10 @@ def variants():
         out.append(("published", m))
         out += [("FC" if s == "rem" else f"FC-{s}", floor_corrected(m, 1.0, noise_from=s))
                 for s in ("rem", "nrem", "min")]
+    # Montreal phasic bursts: sources give 0.1-5 s and 0.1-10 s; the main analysis used 15 s
+    for mx in (5.0, 10.0):
+        m = dataclasses.replace(METHODS["montreal"], phasic_max_s=mx)
+        out += [(f"published-max{mx:g}", m), (f"FC-max{mx:g}", floor_corrected(m, 1.0))]
     out.append(("published", METHODS["aasm"]))
     return out
 
@@ -336,6 +341,18 @@ def main():
     else:
         say("V8, V9: ladder score files not found in results/ (copy them from Drive)")
 
+    say("V10 Montreal phasic bursts limited to 5 s or 10 s instead of 15 s: share flagged (%)")
+    for who in GROUPS:
+        cells = []
+        for variant in ("published", "published-max10", "published-max5", "FC", "FC-max10", "FC-max5"):
+            k, n = flagged(df, who, "Montreal", variant)
+            if n:
+                cells.append(f"{variant} {100 * k / n:.1f}")
+        g = df[(df.who == who) & (df.method == "Montreal") & (df.rem_minutes >= MIN_REM) & df.primary]
+        ph = "  ".join(f"phasic {v} {g[g.variant == v].phasic_pct.mean():.1f}"
+                       for v in ("published", "published-max5") if (g.variant == v).any())
+        say(f"    {who:<13} " + "  ".join(cells) + "   mean " + ph)
+    say()
     (config.RESULTS / "revision_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
