@@ -148,7 +148,7 @@ Automated implementations of the published background-relative RWA criteria do n
 
 ## Declarations
 
-**Data availability.** All recordings are openly available without application: CAP Sleep Database (PhysioNet, doi:10.13026/C2VC79), HMC sleep staging database version 1.1 (PhysioNet, doi:10.13026/t79q-fr32), PhysioNet/Computing in Cardiology Challenge 2018 (PhysioNet, doi:10.13026/6phb-r450), BOAS (OpenNeuro ds005555, doi:10.18112/openneuro.ds005555.v1.1.3) and Dreem Open Datasets (Zenodo, doi:10.5281/zenodo.15900394), with the standard PhysioNet citation \[25\]. The code, the Colab notebook that runs the analyses end to end, every analysis plan with its commit history and the derived per-night scores are at ⟦GitHub URL⟧ (archived: Zenodo doi ⟦⟧).
+**Data availability.** All recordings are openly available without application: CAP Sleep Database (PhysioNet, doi:10.13026/C2VC79), HMC sleep staging database version 1.1 (PhysioNet, doi:10.13026/t79q-fr32), PhysioNet/Computing in Cardiology Challenge 2018 (PhysioNet, doi:10.13026/6phb-r450), BOAS (OpenNeuro ds005555, doi:10.18112/openneuro.ds005555.v1.1.3) and Dreem Open Datasets (Zenodo, doi:10.5281/zenodo.15900394), with the standard PhysioNet citation \[25\]. The code, the Colab notebook that runs the analyses end to end, every analysis plan with its commit history and the derived per-night scores are at https://github.com/arianaariaei/rbd-rwa (archived: Zenodo doi ⟦⟧).
 
 **Ethics.** Secondary analysis of de-identified, openly available data, in accordance with the Declaration of Helsinki; ⟦institutional exemption⟧.
 
