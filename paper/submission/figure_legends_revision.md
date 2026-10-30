@@ -1,7 +1,7 @@
 # Figure legends (revision draft, 2026-10-27)
 
 Figures are submitted as separate PDF/TIFF files. Pre-specified analyses are labeled as such;
-everything else is exploratory. ⟦...⟧: filled from the revision runs.
+everything else is exploratory.
 
 **Figure 1. Share of nights flagged positive by the published cut-offs, automated scoring.**
 Percentage of nights flagged (95% Wilson intervals) by the Montreal criteria (tonic activity in at least 30% of 20-s epochs or phasic activity in at least 15% of 2-s mini-epochs), the SINBAR chin criterion ("any" activity in at least 18.2% of 3-s mini-epochs) and the REM Atonia Index (below 0.8). CAP RBD, patients with RBD (n = 21); CAP patients, patients with other sleep disorders on the same recording system (n = 51); MGH (n = 925) and HMC (n = 147), clinical cohorts. For CAP RBD the share is the sensitivity; for the other groups, the false-positive rate if none has RBD.
@@ -12,7 +12,7 @@ Percentage of nights flagged (95% Wilson intervals) by the Montreal criteria (to
 *Alt text:* Box plots of the quiet-REM level by cohort, MGH at about 0.6 µV and HMC at about 1.5 µV, and a panel showing that re-formatting HMC leaves positivity unchanged while adding noise to MGH lowers it to HMC's level.
 
 **Figure 3. The noise ladder (pre-specified).**
-Share of nights flagged by each published cut-off as white noise is added to the chin EMG of the same nights (0.5-3.0 µV in-band RMS), against the group's median quiet-REM level (log scale). Filled circles, as recorded; open circles, noise added; stars, every night harmonized to 2.0 µV. CAP RBD (n = 21) and CAP patients (n = 51) on CAP's main system; MGH, ⟦V8: n⟧ of the first 300 Challenge 2018 records (at least 10 min of REM as recorded and at every step); HMC, all nights.
+Share of nights flagged by each published cut-off as white noise is added to the chin EMG of the same nights (0.5-3.0 µV in-band RMS), against the group's median quiet-REM level (log scale). Filled circles, as recorded; open circles, noise added; stars, every night harmonized to 2.0 µV. CAP RBD (n = 21) and CAP patients (n = 51) on CAP's main system; MGH, 277 of the first 300 Challenge 2018 records (at least 10 min of REM as recorded and at every step, and a non-zero quiet-REM level); HMC, all nights.
 *Alt text:* Line plot in which the share of nights flagged falls as noise is added, for every group, with MGH's line passing through HMC's point.
 
 **Figure 4. Muscle activity of known size added to nights from six recording systems (pre-specified).**
@@ -29,4 +29,4 @@ Share of nights flagged by the published (open symbols) and floor-corrected (fil
 
 ## Supplementary figures
 
-S1 participant flow; S2 definition of background; S3 cut-offs against each group's distribution; S4 positive calls by a night's own quiet-REM level; S5 harmonizing the floor is not a remedy; S6 floor-corrected criteria along the ladder (former Figure 4); S7 the ladder with pink, drifting and recorded noise ⟦R1⟧; S8 detection curves by system ⟦⟧.
+S1 participant flow; S2 definition of background; S3 cut-offs against each group's distribution; S4 positive calls by a night's own quiet-REM level; S5 harmonizing the floor is not a remedy; S6 floor-corrected criteria along the ladder (former Figure 4); S7 the ladder with pink, drifting and level-matched recorded noise (pink noise as white; drifting noise kept SINBAR high and defeated the night-level floor correction); S8 detection curves by system (known-activity experiment, 686 nights on six systems; summary in Figure 4).
