@@ -541,7 +541,8 @@ class ANPHY:
         chin = chin1 - read_channel(hdr, "ChEMG2")[0]
         ecg1, fs_e, _ = read_channel(hdr, "ECG1")
         ecg = ecg1 - read_channel(hdr, "ECG2")[0]
-        eeg, fs_g, _ = read_channel(hdr, "C4")
+        eeg_ch = _central_eeg(hdr.channels)        # C4 in most nights; not in all
+        eeg, fs_g = read_channel(hdr, eeg_ch)[:2] if eeg_ch else (None, None)
         n_ep = int(len(chin) / fs // EPOCH_SEC)
         hyp = np.full(n_ep, -1, np.int8)
         with open(files["txt"], encoding="latin-1") as f:
@@ -555,7 +556,7 @@ class ANPHY:
                         hyp[e] = self.STAGE[parts[0]]
         return dict(chin=chin, fs=fs, unit_known=self.uv, chin_label="ChEMG1-ChEMG2",
                     ecg=ecg, fs_ecg=fs_e, legs=[], hypnogram=hyp, flags={}, extra={},
-                    eeg=eeg, fs_eeg=fs_g, eeg_label="C4")
+                    eeg=eeg, fs_eeg=fs_g, eeg_label=eeg_ch.label if eeg_ch else None)
 
 
 # 0.39 = median quiet-REM level MGH / HMC (0.59 / 1.52 uV). 1.5 uV of white noise
