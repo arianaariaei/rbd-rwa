@@ -31,8 +31,15 @@ scoring shares the noise-floor dependence is therefore unknown.
 - **Nights.** 30 nights drawn with a fixed seed (20261027): 10 patients with RBD (CAP Sleep
   Database, main recording system), 10 clinical PSGs from MGH (PhysioNet Challenge 2018) and 10
   from HMC (Haaglanden Medisch Centrum). All openly licensed.
-- **Excerpts.** From each night, 20 consecutive REM epochs (the first such stretch; else the
-  longest REM period) with 4 epochs of context on each side; chin EMG, a central EEG channel and
+- **Eligibility (amended 27 Oct 2026, before registration and before any scoring).** Each
+  group's nights are taken in a seeded random order, and a night is used only if it has a stretch
+  of 20 consecutive REM epochs and a quiet-REM level below 1.2 uV as recorded; the first 10
+  eligible nights per group are used and the skipped ones are listed with the reason. Reason: the
+  first draw included an MGH night whose longest REM period was 6 epochs and whose level was
+  already 1.5 uV, so its two copies were identical; such pairs cannot show an effect of noise and
+  cost scoring time.
+- **Excerpts.** From each night, the first stretch of 20 consecutive REM epochs with 4 epochs of
+  context on each side; chin EMG, a central EEG channel and
   the ECG; the original stage scoring as annotations.
 - **Two copies per night.** As recorded, and with band-limited white noise (10-100 Hz) added to
   the chin EMG at the level that raises the night's quiet-REM level (5th percentile of 1-s REM

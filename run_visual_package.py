@@ -2,9 +2,12 @@
 
 Protocol: paper/visual_substudy_protocol.md (to be registered on OSF before any
 scoring). Thirty nights are drawn with a fixed seed: 10 CAP RBD (CAP's main
-system), 10 MGH and 10 HMC. From each night one stretch of 20 consecutive REM
-epochs (the first such stretch; the longest REM period if none is that long) is
-exported with 4 epochs of context on each side, twice: as recorded, and with
+system), 10 MGH and 10 HMC. Each group's nights are taken in a seeded random order
+and a night is used only if it has a stretch of 20 consecutive REM epochs and a
+quiet-REM level below 1.2 uV as recorded (amendment of 27 Oct 2026, before any
+scoring; skipped nights are listed in <out>_KEY/skipped.csv). From each night the
+first such stretch is exported with 4 epochs of context on each side, twice: as
+recorded, and with
 band-limited white noise added to the chin EMG at the level that raises the
 night's quiet-REM level to 1.5 uV (the noise ladder's step h150). The 60 excerpts
 are numbered in random order, so the scorer cannot tell the two copies of a night
@@ -31,17 +34,18 @@ import pandas as pd
 SEED = 20261027
 N_PER = 10
 N_SCORE, CONTEXT = 20, 4
+MAX_LEVEL = 1.2      # uV as recorded: the noisy copy must differ from the recorded one
 STAGE = {0: "W", 1: "N1", 2: "N2", 3: "N3", 4: "R"}
 
 
-def pick_nights():
+def candidates():
+    """Each group's nights in a seeded random order; the first N_PER eligible ones are used."""
     from run_rbdtector import records_for
     rng = np.random.default_rng(SEED)
     out = []
     for cohort, who in (("cap", "CAP RBD"), ("chal18", "MGH"), ("hmc", "HMC")):
         recs, labels = records_for(cohort, 0)
-        recs = [r for r in recs if labels[r] == who]
-        out += [(cohort, r) for r in sorted(rng.choice(recs, N_PER, replace=False))]
+        out.append((cohort, list(rng.permutation(sorted(r for r in recs if labels[r] == who)))))
     return out
 
 
@@ -50,9 +54,7 @@ def scored_stretch(hyp):
     rem = np.flatnonzero(np.asarray(hyp) == 4)
     runs = np.split(rem, np.flatnonzero(np.diff(rem) != 1) + 1) if len(rem) else []
     long = [r for r in runs if len(r) >= N_SCORE]
-    if long:
-        return long[0][:N_SCORE]
-    return max(runs, key=len) if runs else np.array([], int)
+    return long[0][:N_SCORE] if long else np.array([], int)
 
 
 def automated(xf, fs, hyp, epochs):
@@ -98,30 +100,47 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
-    from src.cohorts import COHORTS, _beats
+    import shutil
+    from src.cohorts import COHORTS, _beats, quiet_level
     from src.config import SCRATCH
     from src.ecg import subtract_heartbeat
-    from src.extract import bandpass
+    from src.extract import bandpass, bin_envelope
     from src.noise_arms import harmonized, white
     out, key_dir = Path(args.out), Path(str(args.out).rstrip("/") + "_KEY")
     (out / "excerpts").mkdir(parents=True, exist_ok=True)
     key_dir.mkdir(parents=True, exist_ok=True)
-    nights = pick_nights()
-    ids = np.random.default_rng(SEED + 1).permutation(2 * len(nights)) + 1
-    key, minis, eps = [], [], []
-    for i, (name, rec) in enumerate(nights):
-        cohort = COHORTS[name]
+    groups = candidates()
+    ids = np.random.default_rng(SEED + 1).permutation(2 * N_PER * len(groups)) + 1
+    key, minis, eps, skipped = [], [], [], []
+    i = 0
+    for name, recs in groups:
+      cohort, taken = COHORTS[name], 0
+      for rec in recs:
+        if taken == N_PER:
+            break
         folder = SCRATCH / f"vis_{rec}"
         folder.mkdir(parents=True, exist_ok=True)
-        d = cohort.read(rec, cohort.fetch(rec, folder))
+        try:
+            d = cohort.read(rec, cohort.fetch(rec, folder))
+        except Exception as e:                       # unreadable night: skip and record why
+            skipped.append({"cohort": name, "record": rec, "reason": f"read: {e}"[:200]})
+            shutil.rmtree(folder, ignore_errors=True)
+            continue
         fs, hyp = float(d["fs"]), np.asarray(d["hypnogram"])
         xf, _ = bandpass(d["chin"], fs, mains=cohort.mains)
         beats = _beats(d)
         if len(beats):
             xf = subtract_heartbeat(xf, fs, beats)
+        epochs = scored_stretch(hyp)
+        level0 = quiet_level(bin_envelope(xf, fs)[0], hyp) if len(epochs) else np.nan
+        if len(epochs) < N_SCORE or not level0 < MAX_LEVEL:
+            why = "no 20-epoch REM stretch" if len(epochs) < N_SCORE else f"level {level0:.2f} uV"
+            skipped.append({"cohort": name, "record": rec, "reason": why})
+            print(f"skip {name} {rec}: {why}", flush=True)
+            shutil.rmtree(folder, ignore_errors=True)
+            continue
         track = white(len(xf), fs, cohort.mains, rec)
         _, _, s, level = harmonized(xf, track, fs, hyp, 1.5)
-        epochs = scored_stretch(hyp)
         a = max(0, int(epochs[0]) - CONTEXT)
         b = min(len(hyp), int(epochs[-1]) + CONTEXT + 1)
         for j, (copy, add) in enumerate((("as recorded", 0.0), ("noise", s))):
@@ -136,16 +155,22 @@ def main():
             write_edf(out / "excerpts" / f"{vid}.edf", signals, a * 30, hyp[a:b], epochs, a)
             auto = automated(xf + add * track, fs, hyp, epochs)
             key.append({"excerpt": vid, "cohort": name, "record": rec, "copy": copy,
-                        "added_uv": round(add, 3), "level_after_uv": round(level if add else np.nan, 3),
+                        "added_uv": round(add, 3), "level_recorded_uv": round(level0, 3),
+                        "level_after_uv": round(level if add else np.nan, 3),
                         "scored_epochs": len(epochs), **auto})
             for k, e in enumerate(epochs):
                 t0 = (int(e) - a) * 30
                 eps.append({"excerpt": vid, "epoch": k + 1, "start_s": t0, "tonic": ""})
                 minis += [{"excerpt": vid, "epoch": k + 1, "mini": m + 1, "start_s": t0 + 3 * m, "any": ""}
                           for m in range(10)]
-        print(f"[{i + 1}/{len(nights)}] {name} {rec}: {len(epochs)} epochs, noise {s:.2f} uV", flush=True)
-        import shutil
+        print(f"[{i + 1}/{N_PER * len(groups)}] {name} {rec}: level {level0:.2f} -> {level:.2f} uV, "
+              f"noise {s:.2f} uV", flush=True)
         shutil.rmtree(folder, ignore_errors=True)
+        taken += 1
+        i += 1
+      if taken < N_PER:
+          print(f"only {taken} eligible {name} nights", flush=True)
+    pd.DataFrame(skipped, columns=["cohort", "record", "reason"]).to_csv(key_dir / "skipped.csv", index=False)
     pd.DataFrame(key).sort_values("excerpt").to_csv(key_dir / "key.csv", index=False)
     pd.DataFrame(minis).sort_values(["excerpt", "epoch", "mini"]).to_csv(out / "scoring_minis.csv", index=False)
     pd.DataFrame(eps).sort_values(["excerpt", "epoch"]).to_csv(out / "scoring_epochs.csv", index=False)
