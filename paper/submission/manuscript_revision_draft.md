@@ -1,17 +1,16 @@
 <!-- Revised manuscript after the pre-submission review of 25 October 2026. Draft of 2026-10-30.
      Every result is filled in from results/*.md (revision, injection, noise arms, RBDtector checks,
-     ANPHY-Sleep). ⟦...⟧ now marks only what the authors must supply: the Zenodo DOI of the
-     visual-scoring protocol release, the ethics statement, the AI-use wording, funding and CRediT roles. -->
+     ANPHY-Sleep). ⟦...⟧ now marks only what the authors must supply: Dr. Omranpour's affiliation and the ethics statement. -->
 
 ## Title page
 
 **Title:** The recording system's noise floor biases automated scoring of REM sleep without atonia across sites
 
-**Authors:** Ariana Ariaei¹ \[sleep-medicine co-author\]² \[supervisor\]¹
+**Authors:** Ariana Ariaei¹, Hesam Omranpour²
 
-¹ \[Department, University, City, Country\]; ² \[sleep center\]
+¹ Faculty of Computer Science, Dalhousie University, Halifax, Nova Scotia, Canada; ² ⟦department, university, city, country⟧
 
-**Corresponding author:** \[name, postal address, email\]
+**Corresponding author:** Ariana Ariaei, Faculty of Computer Science, Dalhousie University, 6050 University Avenue, Halifax, NS B3H 1W5, Canada; arianaariaei@dal.ca
 
 **Article type:** Original Article (SLEEP)
 
@@ -125,7 +124,7 @@ Applied through one automated pipeline, the published background-relative RWA cr
 
 ### What the finding is, and what it is not
 
-The finding concerns automated implementations of background-relative criteria. When "background" is computed as the quietest EMG of the night, a threshold of k times background is, on an atonic night, k times the recording system's noise: a quiet system lets the small twitches of normal REM sleep count, and a noisy one hides part of a patient's activity. The criteria's authors defined background by eye, and our automated scores in people without RBD were three to five times those of visually scored controls \[5\], with a higher phasic percentage in RBD than published. A visual scorer reads chin EMG at a chosen display gain at which twitches of a microvolt or two are barely visible, which may protect visual scoring from the mechanism. We have specified a blinded test (the same nights scored visually as recorded and with added noise; protocol archived before any scoring: Zenodo, doi:⟦DOI of release v1.1⟧) and do not claim that visual scoring shares the effect.
+The finding concerns automated implementations of background-relative criteria. When "background" is computed as the quietest EMG of the night, a threshold of k times background is, on an atonic night, k times the recording system's noise: a quiet system lets the small twitches of normal REM sleep count, and a noisy one hides part of a patient's activity. The criteria's authors defined background by eye, and our automated scores in people without RBD were three to five times those of visually scored controls \[5\], with a higher phasic percentage in RBD than published. A visual scorer reads chin EMG at a chosen display gain at which twitches of a microvolt or two are barely visible, which may protect visual scoring from the mechanism. We have specified a blinded test (the same nights scored visually as recorded and with added noise; protocol archived before any scoring: Zenodo, doi:10.5281/zenodo.23816641) and do not claim that visual scoring shares the effect.
 
 Floor correction is a correction for noise, not a complete remedy. Its thresholds are partly absolute and therefore move with amplifier gain and electrode placement: scaling one hospital's recordings by 0.39 changed floor-corrected but not published positivity. Its noise estimate, taken from the quietest REM seconds, also contains muscle activity in patients with RBD (quiet-REM level 0.86 against 0.48 µV in same-system patients), so it subtracts too much in the patients with most tone, which may explain the lower Montreal-FC sensitivity; the quiet N2/N3 level is no remedy, because it contains muscle tone too. It should not be read below 200 Hz or above a quiet-REM level of 1.69 µV, which excluded 38% of HMC nights. And like the published relative rules it assumes that the noise level is roughly stable through the night: noise that drifted made the correction flag far more nights, whereas 1/f noise did not. A noise estimate that follows the night, taken per 11-epoch window of REM, protected the Montreal rule against drifting noise in an exploratory analysis, but not SINBAR's, which counts any 3-s mini-epoch above threshold and is reached by the loudest stretches of such noise. The RAI, which subtracts a moving-minimum noise estimate \[8\], was stable across systems and nearly immune to added noise but, like any absolute measure, depends on gain. Two numbers computable from any recording would make automated RWA results comparable: the quiet-REM level (noise) and the net N2/N3 level (gain). We provide a tool that reports both.
 
@@ -155,11 +154,11 @@ Automated implementations of the published background-relative RWA criteria do n
 
 **Acknowledgements.** We thank the providers of the CAP, HMC, PhysioNet/Computing in Cardiology Challenge 2018, BOAS, Dreem Open Datasets and ANPHY-Sleep for making their recordings openly available, Xiaoyan Wei for confirming the units of the ANPHY-Sleep polygraphic channels, and the authors of the Montreal, SINBAR and RAI methods and of RBDtector for open methods and software. A generative AI assistant (Claude, Anthropic) was used to write and debug analysis code, run the cloud analyses and draft and edit the manuscript. The authors checked all code, results and text and take full responsibility for the content.
 
-**Funding.** ⟦State all funding, or "This work received no specific funding."⟧
+**Funding.** This work received no specific funding.
 
 **Disclosure statement.** Financial disclosure: none. Non-financial disclosure: none. Preprint: none.
 
-**Author contributions.** ⟦CRediT roles⟧
+**Author contributions.** Ariana Ariaei: conceptualization, methodology, software, formal analysis, investigation, data curation, visualization, writing - original draft, writing - review and editing. Hesam Omranpour: supervision.
 
 ## References
 

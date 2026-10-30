@@ -1,4 +1,4 @@
-"""Analyses requested by the pre-submission review (paper/revision_plan_2026-10-27.md),
+"""Analyses added after a pre-submission review,
 specified in paper/preregistration_revision.md (R2-R4, R6) before they were computed.
 
 From the packs (every night as recorded) and the score files of the earlier runs:
