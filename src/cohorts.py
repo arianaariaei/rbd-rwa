@@ -20,6 +20,11 @@ External cohorts (paper/preregistration_external.md):
   dodo    Dreem Open Dataset, obstructive sleep apnea (same). 55 patients,
           Somnomedics Somno HD, 250 Hz. Stanford, USA, 60 Hz.
 
+Added 2026-10-30 (paper/preregistration_anphy.md):
+
+  anphy   ANPHY-Sleep (OSF r26fh). 28 healthy adults aged 20-44, Nihon Kohden
+          JE-120, 1000 Hz; chin EMG units unverified. Montreal, Canada, 60 Hz.
+
 A cohort adapter knows how to list records, fetch one record's files into
 scratch, and read from them: chin EMG, ECG, leg EMG (if any), the hypnogram in
 30 s epochs from the start of the signal, per-epoch event flags and any
@@ -472,6 +477,87 @@ class DOD:
                     eeg_label=eeg_name)
 
 
+class ANPHY:
+    """
+    ANPHY-Sleep (OSF r26fh, Wei et al., Sci Data 2024): healthy adults aged 20-44,
+    one night each (28 released; EPCTL08 is not on OSF), Montreal Neurological
+    Institute, Nihon Kohden JE-120 at 1000 Hz. One zip per subject holding the EDF
+    (94 signals) and a stage file ("stage<TAB>start s<TAB>duration s"; W N1 N2 N3 R,
+    "L" marks lights). Chin EMG = ChEMG1 - ChEMG2, ECG = ECG1 - ECG2. The
+    polygraphic channels carry the unit "?"; they count as microvolts only if `uv`
+    is set, which follows the unit check of paper/preregistration_anphy.md.
+    """
+    name, mains = "anphy", 60.0
+    API = "https://api.osf.io/v2/nodes/r26fh/files/osfstorage/?page%5Bsize%5D=100"
+    SUBJECTS = "https://osf.io/download/trmbu/"
+    STAGE = {"W": 0, "N1": 1, "N2": 2, "N3": 3, "R": 4}
+
+    def __init__(self, uv=False):
+        self.uv, self._zips = uv, None
+
+    def _list(self):
+        if self._zips is None:
+            import json
+            zips, url = {}, self.API
+            while url:
+                j = json.loads(urllib.request.urlopen(url, timeout=60).read().decode())
+                for d in j["data"]:
+                    n = d["attributes"]["name"]
+                    if n.startswith("EPCTL") and n.endswith(".zip"):
+                        zips[n[:7]] = d["links"]["download"]
+                url = j["links"].get("next")
+            self._zips = zips
+        return self._zips
+
+    def records(self):
+        return sorted(self._list())
+
+    def demographics(self):
+        txt = urllib.request.urlopen(self.SUBJECTS, timeout=60).read().decode("utf-8-sig")
+        return {r["Subjects ID"].strip(): {"age": float(r["Age"]), "sex": r["Sex"].strip()}
+                for r in csv.DictReader(io.StringIO(txt))}
+
+    def fetch(self, rec, scratch):
+        import shutil
+        import zipfile
+        from .fetch import download
+        scratch = Path(scratch)
+        z = download(self._list()[rec], scratch / f"{rec}.zip")
+        out = {}
+        with zipfile.ZipFile(z) as zf:
+            for n in zf.namelist():
+                kind = n.lower().rsplit(".", 1)[-1]
+                if kind in ("edf", "txt") and kind not in out:
+                    out[kind] = scratch / f"{rec}.{kind}"
+                    with zf.open(n) as src, open(out[kind], "wb") as dst:
+                        shutil.copyfileobj(src, dst, 1 << 24)
+        z.unlink()
+        return out
+
+    def read(self, rec, files):
+        from .edf import read_header, read_channel
+        hdr = read_header(files["edf"])
+        chin1, fs, _ = read_channel(hdr, "ChEMG1")
+        chin = chin1 - read_channel(hdr, "ChEMG2")[0]
+        ecg1, fs_e, _ = read_channel(hdr, "ECG1")
+        ecg = ecg1 - read_channel(hdr, "ECG2")[0]
+        eeg, fs_g, _ = read_channel(hdr, "C4")
+        n_ep = int(len(chin) / fs // EPOCH_SEC)
+        hyp = np.full(n_ep, -1, np.int8)
+        with open(files["txt"], encoding="latin-1") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) < 3 or parts[0] not in self.STAGE:
+                    continue
+                e0 = int(round(float(parts[1]) / EPOCH_SEC))
+                for e in range(e0, e0 + max(1, int(round(float(parts[2]) / EPOCH_SEC)))):
+                    if 0 <= e < n_ep:
+                        hyp[e] = self.STAGE[parts[0]]
+        return dict(chin=chin, fs=fs, unit_known=self.uv, chin_label="ChEMG1-ChEMG2",
+                    ecg=ecg, fs_ecg=fs_e, legs=[], hypnogram=hyp, flags={}, extra={},
+                    eeg=eeg, fs_eeg=fs_g, eeg_label="C4")
+
+
 # 0.39 = median quiet-REM level MGH / HMC (0.59 / 1.52 uV). 1.5 uV of white noise
 # at 200 Hz leaves ~1.4 uV in the 10-95 Hz band: sqrt(0.59^2 + 1.4^2) ~ 1.52 uV.
 COHORTS = {"chal18": Chal18(), "hmc": HMC(),
@@ -481,7 +567,9 @@ COHORTS = {"chal18": Chal18(), "hmc": HMC(),
            "hmc_low_mgh": HMCDegraded("hmc_low_mgh", fs_out=200, lsb_uv=1.0, gain=0.39),
            "chal18_noise": Chal18Noisy("chal18_noise", noise_uv=1.5),
            "cap": CAP(),
-           "boas": BOAS(), "dodh": DOD("dodh", mains=50.0), "dodo": DOD("dodo", mains=60.0)}
+           "boas": BOAS(), "dodh": DOD("dodh", mains=50.0), "dodo": DOD("dodo", mains=60.0),
+           # units unverified (preregistration_anphy.md, unit check): not microvolts
+           "anphy": ANPHY(uv=False)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
