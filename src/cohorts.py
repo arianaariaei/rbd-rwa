@@ -569,8 +569,9 @@ COHORTS = {"chal18": Chal18(), "hmc": HMC(),
            "chal18_noise": Chal18Noisy("chal18_noise", noise_uv=1.5),
            "cap": CAP(),
            "boas": BOAS(), "dodh": DOD("dodh", mains=50.0), "dodo": DOD("dodo", mains=60.0),
-           # units unverified (preregistration_anphy.md, unit check): not microvolts
-           "anphy": ANPHY(uv=False)}
+           # "?" channels confirmed as microvolts by the dataset's authors on 2026-10-30
+           # (preregistration_anphy.md)
+           "anphy": ANPHY(uv=True)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -57,6 +57,15 @@ rules, which a constant gain does not change; the floor and floor-corrected resu
 confirm that the polygraphic channels are stored in uV. Such a confirmation would be
 recorded here with its date, and the analysis would note that it arrived after this commit.
 
+### Confirmation by the dataset's authors (2026-10-30, after the commit above)
+
+Asked on 2026-10-30 (17:50, Iran time) whether the "?" channels are stored in microvolts,
+Xiaoyan (Winnie) Wei, first author of the data paper (Duke University), replied the same
+evening (21:09): "Yes, the channels with the physical dimension shown as '?' are also stored
+in microvolts (uV)." The chin EMG is therefore read as uV and A1-A6 are evaluated. The 28
+nights had been reduced to packs before this reply (the packs keep the signal in its stored
+values; only the unit flag changes), and no ANPHY result had been looked at.
+
 ## Inclusion and processing
 
 As for the other cohorts: expert sleep stages in 30-s epochs, >= 10 min of REM, chin EMG
