@@ -1,6 +1,6 @@
 <!-- Revised manuscript after the pre-submission review of 25 October 2026. Draft of 2026-10-30.
      Every result is filled in from results/*.md (revision, injection, noise arms, RBDtector checks,
-     ANPHY-Sleep). ⟦...⟧ now marks only what the authors must supply: Dr. Omranpour's affiliation and the ethics statement. -->
+     ANPHY-Sleep). ⟦...⟧ now marks only what the authors must supply: the ethics statement. -->
 
 ## Title page
 
@@ -8,7 +8,7 @@
 
 **Authors:** Ariana Ariaei¹, Hesam Omranpour²
 
-¹ Faculty of Computer Science, Dalhousie University, Halifax, Nova Scotia, Canada; ² ⟦department, university, city, country⟧
+¹ Faculty of Computer Science, Dalhousie University, Halifax, Nova Scotia, Canada; ² Department of Electrical and Computer Engineering, Babol Noshirvani University of Technology, Babol, Iran
 
 **Corresponding author:** Ariana Ariaei, Faculty of Computer Science, Dalhousie University, 6050 University Avenue, Halifax, NS B3H 1W5, Canada; arianaariaei@dal.ca
 
